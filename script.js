@@ -199,9 +199,9 @@ var renderNodes = function() {
     });
 
  		var eltDiv = $('<div class="window node ' + ready + '" title="' + value.metadata.name + '" id="node-' + value.metadata.name +
-                 '" style="left: ' + (x + 250) + '; top: ' + y + '"/>');
+                 '" style="left: ' + (x - 25 ) + '; top: ' + y + '"/>');
 	  eltDiv.html('<span><b>Node</b><br/><br/>' + 
-          truncate(value.metadata.name, 6) +
+          truncate(value.metadata.name, 12) +
           '</span>');
     div.append(eltDiv);
 
@@ -237,7 +237,8 @@ var renderGroups = function() {
 				eltDiv.html('<span>' + 
           truncate(value.metadata.name, 8, true) +
           (value.metadata.labels.version ? "<br/>" + value.metadata.labels.version : "") + "<br/><br/>" +
-          "(" + (value.spec.nodeName ? truncate(value.spec.nodeName, 6) : "None")  +")" +
+          (value.spec.nodeName ? truncate(value.spec.nodeName, 12) : "None") + "<br/><br/>" +
+          "<em>" + value.status.podIP + "</em>" +
           '</span>');
 			} else if (value.type == "service") {
 				eltDiv = $('<div class="window wide service ' + phase + '" title="' + value.metadata.name + '" id="service-' + value.metadata.name +
