@@ -28,7 +28,11 @@ var truncate = function(str, width, left) {
 }
 function extractVersion(image){
 	var temp = image.split(":");
-	return temp[1];
+	if(temp.length > 1){
+		return temp[1];
+	}
+	return "latest"
+	
 }
 
 var pods = [];
@@ -242,7 +246,7 @@ var renderGroups = function() {
           "v."+ extractVersion(value.spec.containers[0].image) +
           (value.metadata.labels.version ? "<br/>" + value.metadata.labels.version : "") + "<br/><br/>" +
           (value.spec.nodeName ? truncate(value.spec.nodeName, 12) : "None") + "<br/><br/>" +
-          "<em>" + value.status.podIP + "</em>" +
+          (value.status.podIP? "<em>" + value.status.podIP + "</em>" : "<em>" + phase + "</em>") +
           '</span>');
 			} else if (value.type == "service") {
 				eltDiv = $('<div class="window wide service ' + phase + '" title="' + value.metadata.name + '" id="service-' + value.metadata.name +
@@ -250,6 +254,7 @@ var renderGroups = function() {
 				eltDiv.html('<span>' + 
           value.metadata.name +
           (value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") + 
+          (value.spec.externalIPs[0] ? "<br/><br/>" + value.spec.externalIPs[0] + ":" +value.spec.ports[0].port : "") +
           (value.spec.clusterIP ? "<br/><br/>" + value.spec.clusterIP : "") +
           (value.status.loadBalancer && value.status.loadBalancer.ingress ? "<br/><a style='color:white; text-decoration: underline' href='http://" + value.status.loadBalancer.ingress[0].ip + "'>" + value.status.loadBalancer.ingress[0].ip + "</a>" : "") +
           '</span>');
@@ -290,6 +295,7 @@ var loadData = function() {
 	var deferred = new $.Deferred();
 	var req1 = $.getJSON("/api/v1/pods?labelSelector=visualize%3Dtrue", function( data ) {
 		pods = data;
+		console.log(pods);
 		$.each(data.items, function(key, val) {
     	val.type = 'pod';
       if (val.metadata.labels && val.metadata.labels.uses) {

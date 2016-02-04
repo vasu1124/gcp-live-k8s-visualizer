@@ -21,6 +21,10 @@
   background-color:yellow;
 }
 
+.terminating {
+  background-color:red;
+}
+
 .window {
   line-height: 1em;
   display: table;
