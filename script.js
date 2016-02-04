@@ -26,6 +26,10 @@ var truncate = function(str, width, left) {
 	}
 	return str;
 }
+function extractVersion(image){
+	var temp = image.split(":");
+	return temp[1];
+}
 
 var pods = [];
 var services = [];
@@ -235,7 +239,7 @@ var renderGroups = function() {
 				eltDiv = $('<div class="window pod ' + phase + '" title="' + value.metadata.name + '" id="pod-' + value.metadata.name +
 					'" style="left: ' + (x + 250) + '; top: ' + (y + 160) + '"/>');
 				eltDiv.html('<span>' + 
-          truncate(value.metadata.name, 8, true) +
+          "v."+ extractVersion(value.spec.containers[0].image) +
           (value.metadata.labels.version ? "<br/>" + value.metadata.labels.version : "") + "<br/><br/>" +
           (value.spec.nodeName ? truncate(value.spec.nodeName, 12) : "None") + "<br/><br/>" +
           "<em>" + value.status.podIP + "</em>" +
