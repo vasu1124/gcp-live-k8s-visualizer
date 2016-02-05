@@ -208,9 +208,12 @@ var renderNodes = function() {
 
  		var eltDiv = $('<div class="window node ' + ready + '" title="' + value.metadata.name + '" id="node-' + value.metadata.name +
                  '" style="left: ' + (x - 25 ) + '; top: ' + y + '"/>');
-	  eltDiv.html('<span><b>Node</b><br/><br/>' + 
+	  eltDiv.html('<span><strong>Node</strong><br/><br/>' + 
           truncate(value.metadata.name, 12) +
           '</span>');
+	  eltDiv.on("click", function() {
+	  	window.location.href = "http://" + value.metadata.name +":4194/"
+	  });
     div.append(eltDiv);
 
 	  var elt = $('.nodesbar');
