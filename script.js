@@ -162,7 +162,6 @@ var connectUses = function() {
 var makeGroupOrder = function() {
 	var groupScores = {};
 	$.each(groups, function(key, val) {
-    //console.log("group key: " + key);
     if (!groupScores[key]) {
     	groupScores[key] = 0;
     }
@@ -188,8 +187,6 @@ var makeGroupOrder = function() {
 		groupOrder.push(key);
 	});
 	groupOrder.sort(function(a, b) { return groupScores[a] - groupScores[b]; });
-
-	//console.log(groupOrder);
 	return groupOrder;
 };
 
@@ -217,9 +214,6 @@ var renderNodes = function() {
 		});
 		div.append(eltDiv);
 		nodesbar.append(div);
-
-	 //  var elt = $('.nodesbar');
-		// elt.append(div);
 
 		x += 120;
 	});
@@ -272,25 +266,23 @@ var renderGroups = function() {
       } else {
       	var key = 'controller-' + value.metadata.labels.name;
       	counts[key] = key in counts ? counts[key] + 1 : 0;
-				//eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="controller-' + value.metadata.name +
-				//	'" style="left: ' + (900 + counts[key] * 100) + '; top: ' + (y + 100 + counts[key] * 100) + '"/>');
-var minLeft = 900;
-var calcLeft = 400 + (value.status.replicas * 130);
-var left = minLeft > calcLeft ? minLeft : calcLeft;
-eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="controller-' + value.metadata.name +
-	'" style="left: ' + (left + counts[key] * 100) + '; top: ' + (y + 100 + counts[key] * 100) + '"/>');
-eltDiv.html('<span>' + 
-	value.metadata.name +
-	(value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") + 
-	'</span>');
-}
-div.append(eltDiv);
-x += 130;
-});
-y += 400;
-serviceLeft += 200;
-elt.append(div);
-});
+		var minLeft = 900;
+		var calcLeft = 400 + (value.status.replicas * 130);
+		var left = minLeft > calcLeft ? minLeft : calcLeft;
+		eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="controller-' + value.metadata.name +
+		'" style="left: ' + (left + counts[key] * 100) + '; top: ' + (y + 100 + counts[key] * 100) + '"/>');
+		eltDiv.html('<span>' + 
+		value.metadata.name +
+		(value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") + 
+		'</span>');
+		}
+	div.append(eltDiv);
+	x += 130;
+	});
+	y += 400;
+	serviceLeft += 200;
+	elt.append(div);
+	});
 };
 
 var insertUse = function(name, use) {
@@ -375,7 +367,7 @@ function refresh(instance) {
 
 		setTimeout(function() {
 			refresh(instance);
-		}, 2000);
+		}, 3000);
 	});
 }
 
