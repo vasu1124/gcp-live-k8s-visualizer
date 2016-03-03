@@ -206,7 +206,7 @@ var renderNodes = function() {
 
 		var eltDiv = $('<div class="window node ' + ready + '" title="' + value.metadata.name + '" id="node-' + value.metadata.name +
 			'" style="left: ' + (x - 25 ) + '; top: ' + y + '"/>');
-		eltDiv.html('<span><strong>Node</strong><br/><br/>' + 
+		eltDiv.html('<img src="pi.png" class="pi-logo"/><span><p class="nodetitle">Node</p><br/>' + 
 			truncate(value.metadata.name, 12) +
 			'</span>');
 		eltDiv.on("click", function() {
@@ -271,8 +271,9 @@ var renderGroups = function() {
 		var left = minLeft > calcLeft ? minLeft : calcLeft;
 		eltDiv = $('<div class="window wide controller" title="' + value.metadata.name + '" id="controller-' + value.metadata.name +
 		'" style="left: ' + (left + counts[key] * 100) + '; top: ' + (y + 100 + counts[key] * 100) + '"/>');
-		eltDiv.html('<span>' + 
-		value.metadata.name +
+		eltDiv.html('<span>'+ '<div>' + 
+		value.metadata.name + '</div>' +
+		'<br/><div class="replicas">Replicas: ' + value.spec.replicas + "</div>" +
 		(value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") + 
 		'</span>');
 		}

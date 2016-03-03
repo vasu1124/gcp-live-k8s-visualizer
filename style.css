@@ -50,6 +50,7 @@
 
 #nav-logo-img {
   height: 42px;
+  margin-bottom: 5px;
 }
 
 .navbar {
@@ -81,3 +82,28 @@
    background-color: red;
  }
 
+ .replicas{
+  font-weight: 800;
+ }
+
+.nodetitle{
+  font-weight: 800;
+      font-size: 16;
+    margin-bottom: 2px;
+}
+
+.pi-logo{
+  width: 25px;
+  z-index: 100;
+  left: 80px;
+  top: 71px;
+  position: inherit;
+}
+
+.header-title{
+      display: inline;
+    float: right;
+    margin-right: 50px;
+    color: white;
+    font-weight: 600;
+}
