@@ -28,7 +28,11 @@ var truncate = function(str, width, left) {
 }
 function extractVersion(image){
 	var temp = image.split(":");
-	if(temp.length > 1){
+	if(temp.length > 2){
+		return temp[2];
+	}
+	else if(temp.length > 1)
+	{
 		return temp[1];
 	}
 	return "latest"
@@ -259,7 +263,7 @@ var renderGroups = function() {
       	eltDiv.html('<span>' + 
       		value.metadata.name +
       		(value.metadata.labels.version ? "<br/><br/>" + value.metadata.labels.version : "") + 
-      		(value.spec.externalIPs[0] ? "<br/><br/>" + value.spec.externalIPs[0] + ":" +value.spec.ports[0].port : "") +
+      		(value.spec.externalIPs ? "<br/><br/>" + value.spec.externalIPs[0] + ":" +value.spec.ports[0].port : "") +
       		(value.spec.clusterIP ? "<br/><br/>" + value.spec.clusterIP : "") +
       		(value.status.loadBalancer && value.status.loadBalancer.ingress ? "<br/><a style='color:white; text-decoration: underline' href='http://" + value.status.loadBalancer.ingress[0].ip + "'>" + value.status.loadBalancer.ingress[0].ip + "</a>" : "") +
       		'</span>');
