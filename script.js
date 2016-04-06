@@ -316,11 +316,10 @@ var loadData = function() {
 			}
 		});
 	});
-
-	var req2 = $.getJSON("/api/v1/replicationcontrollers?labelSelector=visualize%3Dtrue", function( data ) {
+	var req2 = $.getJSON("/apis/extensions/v1beta1/namespaces/default/deployments/?labelSelector=visualize%3Dtrue", function( data ) {
 		controllers = data;
 		$.each(data.items, function(key, val) {
-			val.type = 'replicationController';
+			val.type = 'deployment';
       //console.log("Controller ID = " + val.metadata.name)
   });
 	});
