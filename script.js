@@ -356,11 +356,27 @@ limitations under the License.
         });
     }
 
-    function insertByName(index, value) {
+    function insertPod(index, value) {
         if (!value || !value.metadata.labels || !value.metadata.name) {
             return;
         }
         var key = value.metadata.labels.app;
+        insertToGroup(key, value);
+    }
+
+    function insertService(index, value) {
+        if (!value || !value.spec.selector || !value.spec.selector.app || !value.metadata.name) {
+            return;
+        }
+        var key = value.spec.selector.app;
+        insertToGroup(key, value);
+    }
+
+    function insertDeployment(index, value) {
+        if (!value || !value.spec.selector || !value.spec.selector.matchLabels || !value.spec.selector.matchLabels.app || !value.metadata.name) {
+            return;
+        }
+        var key = value.spec.selector.matchLabels.app;
         insertToGroup(key, value);
     }
 
@@ -373,27 +389,11 @@ limitations under the License.
         list.push(value);
     }
 
-    function insertBySelector(index, value) {
-        if (!value || !value.spec.selector || !value.spec.selector.app || !value.metadata.name) {
-            return;
-        }
-        var key = value.spec.selector.app;
-        insertToGroup(key, value);
-    }
-
-    function insertBySelectorMatchLabels(index, value) {
-        if (!value || !value.spec.selector || !value.spec.selector.matchLabels || !value.spec.selector.matchLabels.app || !value.metadata.name) {
-            return;
-        }
-        var key = value.spec.selector.matchLabels.app;
-        insertToGroup(key, value);
-    }
-
     function groupByName() {
         // pods first. Important to calculate service placement.
-        forEach(pods, insertByName);
-        forEach(deployments, insertBySelectorMatchLabels);
-        forEach(services, insertBySelector);
+        forEach(pods, insertPod);
+        forEach(deployments, insertDeployment);
+        forEach(services, insertService);
     }
 
     function matchesLabelQuery(labels, selector) {
