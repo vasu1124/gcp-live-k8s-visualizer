@@ -13,29 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+<!doctype html>
 <html>
-  <head>
-    <script src="jquery.min.js"></script>
-    <script src="jquery-ui.min.js"></script>
-    <script src="jsplumb/jquery.jsPlumb-1.6.4.js"></script>
-    <link rel="stylesheet" href="jsplumb/jsplumb.css">
-    <link rel="stylesheet" href="jsplumb/flowchart-style.css">
 
-    <script src="script.js"></script>
-    <link rel="stylesheet" href="style.css">
-  </head>
-  <body>
-    <div id="main">
-      <div class="navbar">
-        <div class="navbar-logo">
-          <img src="logotext.svg" id="nav-logo-img" alt="logo">
-          <p class="header-title">rpi-cloud visualizer</p>
-        </div>
-      </div>
-      <div class="nodesbar">
-      </div>
-      <div class="demo flowchart-demo" id="sheet">
+<head>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="main">
+    <div class="navbar">
+      <p class="header-title">rpi-cloud visualizer</p>
+      <div class="navbar-logo">
+        <img src="kubernetes-logo.svg" alt="Kubernetes logo">
       </div>
     </div>
-  </body>
+    <div class="nodesbar">
+      <div class="canvas"></div>
+    </div>
+    <div class="cluster">
+      <div class="canvas"></div>
+    </div>
+  </div>
+
+  <script src="jsPlumb-2.1.2-min.js"></script>
+  <script src="script.js"></script>
+</body>
+
 </html>

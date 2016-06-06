@@ -1,109 +1,179 @@
-.wide {
-  width: 150px;
+/* Fonts */
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 400;
+  src:local('Open Sans'),
+  local('OpenSans'),
+  url("OpenSans-Regular.ttf") format('truetype'),
+  url("OpenSans.woff") format('woff');
 }
 
-.service {
+/* General */
+body {
+  font-family:'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.main {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+
+  font-size: 80%;
+}
+
+a, a:visited {
+  text-decoration:none;
+  color:black;
+  border-radius:0.2em;
+  -webkit-transition: color 0.15s ease-in;
+  -moz-transition: color 0.15s ease-in;
+  -o-transition: color 0.15s ease-in;
+  transition: color 0.15s ease-in;
+}
+
+.canvas {
+  position: relative;
+}
+
+/* Entry types */
+.window.service {
   background-color: rgb(0,153,57);
   color: white;
 }
 
-.controller {
+.window.deployment {
   background-color:rgb(51,105,232);
   color: white;
 }
 
-.pod {
+.window.pod {
   width: 100px;
   background-color:#eeeeef;
 }
 
-.pending {
+.window.node {
+  background-color: white;
+}
+
+.window.wide {
+  width: 150px;
+}
+
+/* Entry styles */
+.window.pending {
   background-color:yellow;
 }
 
-.terminating {
+.window.terminating {
   background-color:red;
 }
 
-.window {
-  line-height: 1em;
-  display: table;
+a.load-balancer {
+  color: white;
+  text-decoration: underline
 }
 
-.window span {
-  display: table-cell;
-  vertical-align: middle;
+.replicas {
+  font-weight: 800;
 }
 
-.logo {
-  background: url('titlelogo.svg');
-  background-repeat: no-repeat;
-  height: 150px;
-  width: 600px;
+/* Navigation bar */
+.navbar {
+  background-color: #447AE8;
+  padding-top: 5px;
+  padding-bottom: 5px;
 }
 
-.navbar-logo {
+.navbar .navbar-logo {
   margin-left: 10px;
-  margin-top: 5px;
   text-align: left;
 }
 
-#nav-logo-img {
+.navbar .navbar-logo img {
   height: 42px;
-  margin-bottom: 5px;
 }
 
-.navbar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  background-color: #447AE8;
-  border: 0px;
-  border-radius: 0;
+.navbar .header-title {
+  float: right;
+  margin-right: 50px;
+  color: white;
+  font-weight: 600;
 }
 
+/* Nodes bar */
 .nodesbar {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 50px;
-    height: 200px;
-    background-color: light-grey;
-    border-bottom: thick solid black;
+  height: 104px;
+  padding-left: 75px;
+  padding-top: 25px;
+  padding-bottom: 25px;
+  background-color: whitesmoke;
 }
 
-.not_ready {
+.nodesbar .not-ready {
   background-color: red;
 }
 
-
- .terminating {
-   background-color: red;
- }
-
- .replicas{
+.nodesbar .nodetitle {
   font-weight: 800;
- }
-
-.nodetitle{
-  font-weight: 800;
-      font-size: 16;
-    margin-bottom: 2px;
+  font-size: 16px;
+  margin-top: 0;
 }
 
-.pi-logo{
+.nodesbar .pi-logo {
   width: 25px;
-  z-index: 100;
+  z-index: 1;
   left: 80px;
   top: 71px;
   position: inherit;
 }
 
-.header-title{
-      display: inline;
-    float: right;
-    margin-right: 50px;
-    color: white;
-    font-weight: 600;
+/* Cluster */
+.cluster {
+  padding-top: 10px;
+  padding-left: 75px;
+}
+
+.window {
+  position:absolute;
+  height:80px;
+  display: table;
+  padding:0.5em;
+
+  cursor: default;
+
+  line-height: 1em;
+  text-align:center;
+
+  color:black;
+  border:1px solid #346789;
+  border-radius:0.5em;
+  -moz-border-radius:0.5em;
+
+  box-shadow: 2px 2px 19px #e0e0e0;
+  -o-box-shadow: 2px 2px 19px #e0e0e0;
+  -webkit-box-shadow: 2px 2px 19px #e0e0e0;
+  -moz-box-shadow: 2px 2px 19px #e0e0e0;
+
+  -webkit-transition: -webkit-box-shadow 0.15s ease-in;
+  -moz-transition: -moz-box-shadow 0.15s ease-in;
+  -o-transition: -o-box-shadow 0.15s ease-in;
+  transition: box-shadow 0.15s ease-in;
+}
+.window:hover {
+  border:1px solid #123456;
+  opacity:0.9;
+  filter:alpha(opacity=90);
+
+  box-shadow: 2px 2px 19px #444;
+  -o-box-shadow: 2px 2px 19px #444;
+  -webkit-box-shadow: 2px 2px 19px #444;
+  -moz-box-shadow: 2px 2px 19px #fff;
+}
+
+.window span {
+  display: table-cell;
+  vertical-align: middle;
 }
