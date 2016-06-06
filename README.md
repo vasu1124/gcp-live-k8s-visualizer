@@ -4,10 +4,49 @@ This is a simple visualizer for use with the Kubernetes API.
 
 ### Usage:
    * First install a Kubernetes or Container Engine Cluster
-   * ```git clone https://github.com/saturnism/gcp-live-k8s-visualizer.git```
-   * ```kubectl proxy --www=path/to/gcp-live-k8s-visualizer```
+   * Clone this repository
+   * Run `kubectl proxy -w=path/to/gcp-live-k8s-visualizer`
 
-That's it.  The visualizer uses labels to organize the visualization.  In particular it expects that
+### Prerequisites
+The visualizer uses labels to organize the visualization.
 
-   * pods, replicationcontrollers, and services have a ```name``` label, and pods and their associated replication controller share the same ```name```, and
-   * the pods in your cluster will have a ```uses``` label which contains a comma separated list of services that the pod uses.
+To enable visualization of kubernetes entities set `visualize` to `true`.
+
+  * Pods are identified with the label `app`.
+
+  * Services by a selector property named `app`.
+
+  * Deployments by their template label `app`.
+
+Here follows minimized `.yaml` files to show the configuration.
+
+Service configuration
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-kubernetes-svc
+  labels:
+    visualize: "true"
+spec:
+  selector:
+    app: hello-kubernetes-pod
+```
+
+Deployment configuration
+
+```yaml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: hello-kubernetes-deployment
+  labels:
+    visualize: "true"
+spec:
+  template:
+    metadata:
+      labels:
+        app: hello-kubernetes-pod
+        visualize: "true"
+```
