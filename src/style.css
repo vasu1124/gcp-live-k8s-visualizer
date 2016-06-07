@@ -44,6 +44,11 @@ a, a:visited {
   color: white;
 }
 
+.window.service a {
+  color: white;
+  text-decoration: underline
+}
+
 .window.deployment {
   background-color:rgb(51,105,232);
   color: white;
@@ -56,6 +61,7 @@ a, a:visited {
 
 .window.node {
   background-color: white;
+  cursor: pointer;
 }
 
 .window.wide {
@@ -69,11 +75,6 @@ a, a:visited {
 
 .window.terminating {
   background-color:red;
-}
-
-a.load-balancer {
-  color: white;
-  text-decoration: underline
 }
 
 .replicas {

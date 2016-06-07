@@ -177,9 +177,9 @@ limitations under the License.
                             '<span>' +
                             '<div>' + name + '</div>' +
                             (version ? "<br/>" + version : '') +
-                            (externalIps ? '<br/><br/>' + externalIps[0] + ":" + value.spec.ports[0].port : '') +
+                            (externalIps ? '<br/><br/><a href="http://' + externalIps[0] + ':' + value.spec.ports[0].port + '" target="_blank" rel="noreferrer nofollow">' + externalIps[0] + ':' + value.spec.ports[0].port + '</a>' : '') +
                             (clusterIp ? '<br/><br/>' + clusterIp : '') +
-                            (loadBalancer ? '<br/><a class="load-balancer" href="http://' + loadBalancer + '" target="_blank" rel="noreferrer nofollow">' + loadBalancer + '</a>' : '') +
+                            (loadBalancer ? '<br/><a href="http://' + loadBalancer + '" target="_blank" rel="noreferrer nofollow">' + loadBalancer + '</a>' : '') +
                             '</span>' +
                             '</div>';
                         break;
@@ -397,10 +397,10 @@ limitations under the License.
     }
 
     function matchesLabelQuery(labels, selector) {
-        var match = false;
+        var match = true;
         forProperty(selector, function (key, value) {
-            if (labels[key] === value) {
-                match = true;
+            if (labels[key] !== value) {
+                match = false;
             }
         });
         return match;
