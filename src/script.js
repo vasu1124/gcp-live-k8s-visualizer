@@ -16,12 +16,20 @@ limitations under the License.
 
 (function () {
 
-    // Defintions
+    // definitions
+    var ENTITY_HEIGHT = 95;
     var NODE_SPACE = 30;
-    var SRV_POD_SPACE = 190;
+
+    var SRV_POD_SPACE_HOR = 190;
+    var SRV_POD_SPACE_VER = 40;
+
     var DEPL_MIN_LEFT = 900;
-    var GRP_HEIGHT = 330;
     var DEPL_POD_SPACE = 200;
+
+    var GROUP_VER = 40;
+
+    var LINE_WIDTH = 3;
+    var LINE_RADIUS = 3;
 
     var UPDATE_INTERVAL = 3000;
 
@@ -63,8 +71,8 @@ limitations under the License.
                         source: 'deployment-' + deployment.metadata.name,
                         target: 'pod-' + pod.metadata.name,
                         anchors: ['Bottom', 'Bottom'],
-                        paintStyle: { lineWidth: 5, strokeStyle: COLOR_DPL_POD },
-                        endpointStyle: { fillStyle: COLOR_DPL_POD, radius: 7 }
+                        paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLOR_DPL_POD },
+                        endpointStyle: { fillStyle: COLOR_DPL_POD, radius: LINE_RADIUS }
                     });
                 }
             });
@@ -79,12 +87,26 @@ limitations under the License.
                         source: 'service-' + service.metadata.name,
                         target: 'pod-' + pod.metadata.name,
                         anchors: ["Bottom", "Top"],
-                        paintStyle: { lineWidth: 5, strokeStyle: COLOR_SVC_POD },
-                        endpointStyle: { fillStyle: COLOR_SVC_POD, radius: 7 }
+                        paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLOR_SVC_POD },
+                        endpointStyle: { fillStyle: COLOR_SVC_POD, radius: LINE_RADIUS }
                     });
                 }
             });
         });
+    }
+
+    function getNodeProvider(node) {
+        if (!node || !node.spec || !node.spec.providerID) {
+            return '';
+        }
+
+        var provider = node.spec.providerID.split(':')[0];
+        switch (provider) {
+            case 'gce':
+                return 'gce';
+            default:
+                return 'pi';
+        }
     }
 
     function renderNodes() {
@@ -102,6 +124,8 @@ limitations under the License.
                 }
             }
 
+            var provider = getNodeProvider(node);
+
             var nodeElement =
                 '<div>' +
                 '<a href="http://' + node.metadata.name + ':4194/"' +
@@ -110,7 +134,7 @@ limitations under the License.
                 'class="window node ' + ready + '"' +
                 'title="' + node.metadata.name + '"' +
                 'style="left: ' + x + 'px">' +
-                '<img src="pi.png" class="pi-logo"/>' +
+                '<img src="providers/' + provider + '.png" class="provider-logo" />' +
                 '<span><p class="nodetitle">Node</p><br/>' +
                 truncate(node.metadata.name, 12) + '</span>' +
                 '</a>' +
@@ -156,7 +180,7 @@ limitations under the License.
 
                         entity =
                             '<div class="window pod ' + phase + '" title="' + name + '" id="pod-' + name +
-                            '" style="left: ' + (x + SRV_POD_SPACE) + 'px; top: ' + (y + SRV_POD_SPACE) + 'px">' +
+                            '" style="left: ' + (x + SRV_POD_SPACE_HOR) + 'px; top: ' + (y + ENTITY_HEIGHT + SRV_POD_SPACE_VER) + 'px">' +
                             '<span>' +
                             "v." + extractVersion(value.spec.containers[0].image) +
                             (version ? "<br/>" + version : "") + "<br/><br/>" +
@@ -217,7 +241,7 @@ limitations under the License.
             });
             groupDiv += '</div>';
 
-            y += GRP_HEIGHT;
+            y += 2 * ENTITY_HEIGHT + SRV_POD_SPACE_VER + GROUP_VER;
             elt.insertAdjacentHTML('beforeend', groupDiv);
         });
     };

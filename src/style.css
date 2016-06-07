@@ -12,6 +12,7 @@
 /* General */
 body {
   font-family:'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 0.8em;
 }
 
 .main {
@@ -20,8 +21,6 @@ body {
   left: 0;
   bottom: 0;
   right: 0;
-
-  font-size: 80%;
 }
 
 a, a:visited {
@@ -84,8 +83,7 @@ a, a:visited {
 /* Navigation bar */
 .navbar {
   background-color: #447AE8;
-  padding-top: 5px;
-  padding-bottom: 5px;
+  padding-top: 2px;
 }
 
 .navbar .navbar-logo {
@@ -106,10 +104,9 @@ a, a:visited {
 
 /* Nodes bar */
 .nodesbar {
-  height: 104px;
+  height: 103px;
   padding-left: 75px;
-  padding-top: 25px;
-  padding-bottom: 25px;
+  padding-top: 18px;
   background-color: whitesmoke;
 }
 
@@ -123,12 +120,12 @@ a, a:visited {
   margin-top: 0;
 }
 
-.nodesbar .pi-logo {
-  width: 25px;
+.nodesbar .provider-logo {
+  height: 30px;
   z-index: 1;
-  left: 80px;
-  top: 71px;
   position: inherit;
+  right: -11px;
+  top: -14px;
 }
 
 /* Cluster */
