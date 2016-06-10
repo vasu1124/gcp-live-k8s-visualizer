@@ -1,22 +1,44 @@
-function truncate(str, width, left) {
+/**
+ * Truncate string length with '...'.
+ * If left is true, the truncation is done at the end of the string.
+ * Otherwise it is done at the beginning.
+ *
+ * @param str {string} The string.
+ * @param length {number} The maximum length.
+ * @param left {boolean} If true truncate at the end.
+ */
+function truncate(str, length, left) {
     if (!str) return '';
 
-    if (str.length > width) {
+    if (str.length > length) {
         if (left) {
-            return str.slice(0, width) + '...';
+            return str.slice(0, length) + '...';
         } else {
-            return '...' + str.slice(str.length - width, str.length);
+            return '...' + str.slice(str.length - length, str.length);
         }
     }
     return str;
 }
 
+/**
+ * For each object in array.
+ *
+ * @param array The array.
+ * @param delegate The delegate (index, value).
+ */
 function forEach(array, delegate) {
+    if (!array) {
+        return;
+    }
+
     for (var i = 0; i < array.length; i++) {
         delegate(i, array[i]);
     }
 }
 
+/**
+ * For each property in object.
+ */
 function forProperty(object, callback) {
     for (var key in object) {
         if (object.hasOwnProperty(key)) {
@@ -25,6 +47,10 @@ function forProperty(object, callback) {
     }
 }
 
+/**
+ * Extract version number from image name.
+ * If no version number is present, return 'latest'.
+ */
 function extractVersion(image) {
     var temp = image.split(':');
     if (temp.length > 2) {
@@ -36,10 +62,14 @@ function extractVersion(image) {
     return 'latest'
 }
 
-function matchLabelSelectors(labels, selector) {
+/**
+ * Match object properties.
+ * Return true if all properties are equal.
+ */
+function matchObjects(objectA, objectB) {
     var match = true;
-    forProperty(selector, function (key, value) {
-        if (labels[key] !== value) {
+    forProperty(objectB, function (key, value) {
+        if (objectA[key] !== value) {
             match = false;
         }
     });

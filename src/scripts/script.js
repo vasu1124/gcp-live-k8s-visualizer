@@ -17,6 +17,7 @@ limitations under the License.
 (function () {
 
     var UPDATE_INTERVAL = 3000;
+    var REQUEST_TIMEOUT = 2000;
 
     var pods;
     var services;
@@ -34,60 +35,24 @@ limitations under the License.
         // }, UPDATE_INTERVAL);
     });
 
-
-    function loadData() {
-        var requests = [];
-
-        // var podsReq = getJson('/api/v1/pods?labelSelector=visualize%3Dtrue')
-        var podsReq = getJson('pods.json')
-            .then(function (data) {
-                pods = data.items;
-            });
-        requests.push(podsReq);
-
-        // var deploymentsReq = getJson('/apis/extensions/v1beta1/namespaces/default/deployments/?labelSelector=visualize%3Dtrue')
-        var deploymentsReq = getJson('deployment.json')
-            .then(function (data) {
-                deployments = data.items;
-            });
-        requests.push(deploymentsReq);
-
-        var servicesReq = getJson('/api/v1/services?labelSelector=visualize%3Dtrue')
-            .then(function (data) {
-                services = data.items;
-            });
-        requests.push(servicesReq);
-
-        var nodesReq = getJson('/api/v1/nodes')
-            .then(function (data) {
-                nodes = data.items;
-            });
-        requests.push(nodesReq);
-
-        return Promise.all(requests);
-    }
-
     function draw(clusterInstance) {
         pods = [];
         services = [];
         deployments = [];
         nodes = [];
-        groups = {};
-
+        groups = [];
 
         loadData().then(function () {
             document.querySelector(CANVAS_CLUSTER).innerHTML = '';
             document.querySelector(CANVAS_NODES).innerHTML = '';
 
             groupByName();
-            renderNodes(nodes);
-            renderGroups(groups);
-
             clusterInstance.batch(function () {
                 clusterInstance.detachEveryConnection();
                 clusterInstance.deleteEveryEndpoint();
-                connectDeployments(clusterInstance, deployments, pods);
-                connectServices(clusterInstance, services, pods);
+
+                renderNodes(nodes);
+                renderGroups(groups, clusterInstance);
             });
         });
     }
@@ -96,6 +61,49 @@ limitations under the License.
         clusterInstance.importDefaults({
             Connector: ["Flowchart", { cornerRadius: 5 }]
         });
+    }
+
+
+    function loadData() {
+        var requests = [];
+
+        // var podsReq = getJson('/api/v1/pods?labelSelector=visualize%3Dtrue')
+        var podsReq = getJson('pods.json')
+            .then(function (data) {
+                pods = data.items;
+            }, function (error) {
+                console.error('pods not found', error);
+            });
+        requests.push(podsReq);
+
+        // var deploymentsReq = getJson('/apis/extensions/v1beta1/namespaces/default/deployments/?labelSelector=visualize%3Dtrue')
+        var deploymentsReq = getJson('deployment.json')
+            .then(function (data) {
+                deployments = data.items;
+            }, function (error) {
+                console.error('deployments not found', error);
+            });
+        requests.push(deploymentsReq);
+
+        // var servicesReq = getJson('/api/v1/services?labelSelector=visualize%3Dtrue')
+        var servicesReq = getJson('service.json')
+            .then(function (data) {
+                services = data.items;
+            }, function (error) {
+                console.error('services not found', error);
+            });
+        requests.push(servicesReq);
+
+        // var nodesReq = getJson('/api/v1/nodes')
+        var nodesReq = getJson('nodes.json')
+            .then(function (data) {
+                nodes = data.items;
+            }, function (error) {
+                console.error('nodes not found', error);
+            });
+        requests.push(nodesReq);
+
+        return Promise.all(requests);
     }
 
     function getJson(url) {
@@ -116,67 +124,91 @@ limitations under the License.
                 reject(Error('Network error'));
             };
 
+            httpRequest.ontimeout = function () {
+                reject(Error('Network timeout'));
+            };
+
             httpRequest.open('GET', url, true);
+            httpRequest.timeout = REQUEST_TIMEOUT;
             httpRequest.send();
         });
 
         return promise;
     }
 
-    function insertPod(index, value) {
-        if (!value || !value.metadata.labels || !value.metadata.name) {
-            return;
-        }
-        var key = value.metadata.labels.app;
-        initGroup(group, key);
-        var group = groups[key];
-
-        if (!group.pods) {
-            group.pods = [];
-        }
-        group.pods.push(value);
-    }
-
-    function insertService(index, value) {
-        if (!value || !value.spec.selector || !value.spec.selector.app || !value.metadata.name) {
-            return;
-        }
-        var key = value.spec.selector.app;
-        initGroup(group, key);
-        var group = groups[key];
-
-        if (!group.services) {
-            group.services = [];
-        }
-        group.services.push(value);
-    }
-
-    function insertDeployment(index, value) {
-        if (!value || !value.spec.selector || !value.spec.selector.matchLabels || !value.spec.selector.matchLabels.app || !value.metadata.name) {
-            return;
-        }
-        var key = value.spec.selector.matchLabels.app;
-        initGroup(group, key);
-        var group = groups[key];
-
-        if (!group.deployments) {
-            group.deployments = [];
-        }
-        group.deployments.push(value);
-    }
-
-    function initGroup(group, key) {
-        var group = groups[key];
-        if (!group) {
-            group = {};
-            groups[key] = group;
-        }
-    }
-
     function groupByName() {
-        // pods first. Important to calculate service placement.
+        forEach(services, insertService);
         forEach(pods, insertPod);
         forEach(deployments, insertDeployment);
-        forEach(services, insertService);
+    }
+
+    function insertService(index, service) {
+        if (!service || !service.spec || !service.spec.selector) {
+            return;
+        }
+        var selector = service.spec.selector;
+
+        var groupIndex = getGroupIndex(selector);
+
+        if (groupIndex > -1) {
+            groups[groupIndex].services.push(service);
+        } else {
+            groups.push({
+                identifier: selector,
+                services: [service]
+            });
+        }
+    }
+
+    function insertPod(index, pod) {
+        if (!pod || !pod.metadata || !pod.metadata.labels) {
+            return;
+        }
+
+        var labels = pod.metadata.labels;
+
+        var groupIndex = getGroupIndex(labels);
+
+        if (groupIndex > -1) {
+            if (!groups[groupIndex].pods) {
+                groups[groupIndex].pods = [];
+            }
+            groups[groupIndex].pods.push(pod);
+        } else {
+            groups.push({
+                identifier: labels,
+                pods: [pod]
+            });
+        }
+    }
+
+    function insertDeployment(index, deployment) {
+        if (!deployment || !deployment.spec.selector || !deployment.spec.selector.matchLabels || !deployment.spec.selector.matchLabels.app || !deployment.metadata.name) {
+            return;
+        }
+        var labels = deployment.spec.selector.matchLabels;
+        var groupIndex = getGroupIndex(labels);
+
+        if (groupIndex > -1) {
+            if (!groups[groupIndex].deployments) {
+                groups[groupIndex].deployments = [];
+            }
+            groups[groupIndex].deployments.push(deployment);
+        } else {
+            groups.push({
+                identifier: labels,
+                deployments: [deployment]
+            });
+        }
+    }
+
+    function getGroupIndex(selector) {
+        for (var index = 0; index < groups.length; index++) {
+            if (matchObjects(selector, groups[index].identifier)) {
+                return index;
+            }
+        }
+
+        return -1;
     }
 })();
