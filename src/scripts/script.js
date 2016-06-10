@@ -136,12 +136,21 @@ limitations under the License.
         return promise;
     }
 
+    /**
+     * Group all services, pods and deployments into groups array.
+     */
     function groupByName() {
         forEach(services, insertService);
         forEach(pods, insertPod);
         forEach(deployments, insertDeployment);
     }
 
+    /**
+     * Insert service into groups array according to the spec.selector property.
+     *
+     * @param {number} index The index of iteration.
+     * @param {Object} service The service.
+     */
     function insertService(index, service) {
         if (!service || !service.spec || !service.spec.selector) {
             return;
@@ -160,6 +169,12 @@ limitations under the License.
         }
     }
 
+    /**
+     * Insert pod into groups array according to the metadata.labels property.
+     *
+     * @param {number} index The index of iteration.
+     * @param {Object} pod The pod.
+     */
     function insertPod(index, pod) {
         if (!pod || !pod.metadata || !pod.metadata.labels) {
             return;
@@ -175,6 +190,7 @@ limitations under the License.
             }
             groups[groupIndex].pods.push(pod);
         } else {
+            sanitizePodLabels(labels);
             groups.push({
                 identifier: labels,
                 pods: [pod]
@@ -182,6 +198,28 @@ limitations under the License.
         }
     }
 
+    /**
+     * Remove unique identifiers in pod labels.
+     * GCE adds a pod-template-hash to Pods created with a deployment.
+     * This breaks grouping capabilities and is not needed elsewhere.
+     *
+     * @param {Object} labels The labels.
+     */
+    function sanitizePodLabels(labels) {
+        forProperty(labels, function (key, value) {
+            if (key.search('-hash') > -1) {
+                delete labels[key];
+            }
+        });
+    }
+
+    /**
+     * Insert deployments into groups array according to the
+     * generated selector.matchLabels property.
+     *
+     * @param {number} index The index of iteration.
+     * @param {Object} deployment The deployment.
+     */
     function insertDeployment(index, deployment) {
         if (!deployment || !deployment.spec.selector || !deployment.spec.selector.matchLabels || !deployment.spec.selector.matchLabels.app || !deployment.metadata.name) {
             return;
@@ -202,9 +240,15 @@ limitations under the License.
         }
     }
 
-    function getGroupIndex(selector) {
+    /**
+     * Find array index of group by matching object with identifier.
+     * If not found return -1.
+     *
+     * @param {Object} object The object to match with.
+     */
+    function getGroupIndex(object) {
         for (var index = 0; index < groups.length; index++) {
-            if (matchObjects(selector, groups[index].identifier)) {
+            if (matchObjects(object, groups[index].identifier)) {
                 return index;
             }
         }

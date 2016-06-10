@@ -40,7 +40,7 @@ function renderGroups(groups, jsPlumbInstance) {
 
         groupDiv += renderPods(group.pods, y);
         groupDiv += renderServices(group.services, y);
-        groupDiv += renderDeployments(group.deployments, group.pods.length, y);
+        groupDiv += renderDeployments(group.deployments, (group.pods ? group.pods.length : 0), y);
 
         groupDiv += '</div>';
         canvas.insertAdjacentHTML('beforeend', groupDiv);

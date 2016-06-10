@@ -38,11 +38,14 @@ function forEach(array, delegate) {
 
 /**
  * For each property in object.
+ *
+ * @param {Object} object The object.
+ * @param {function(key, value)} delegate The function to call for each property-
  */
-function forProperty(object, callback) {
+function forProperty(object, delegate) {
     for (var key in object) {
         if (object.hasOwnProperty(key)) {
-            callback(key, object[key]);
+            delegate(key, object[key]);
         }
     }
 }
