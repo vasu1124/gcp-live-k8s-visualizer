@@ -175,12 +175,12 @@ function renderDeployments(deployments, podsCount, y) {
     deployments.forEach((deployment, index) => {
         const name = deployment.metadata.name;
         const version = deployment.metadata.labels.version;
-        // const phase = deployment.status.phase ? deployment.status.phase.toLowerCase() : '';
+        const phase = deployment.status.phase ? deployment.status.phase.toLowerCase() : '';
 
         const x = getDeploymentLeftOffset(deployment, podsCount);
 
         const entity =
-            `<div class="window wide deployment" title="${name}" id="deployment-${name}"
+            `<div class="window wide deployment ${phase}" title="${name}" id="deployment-${name}"
             style="left: ${x}px; top: ${(y + 130 + (index * 1.5 * ENTITY_HEIGHT))}px">
             <span>
             <div>${name}</div>
