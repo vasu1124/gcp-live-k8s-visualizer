@@ -2,6 +2,8 @@
 
 This is a simple visualizer for use with the Kubernetes API.
 
+![Screenshot][screenshot]
+
 ### Usage:
    * First install a Kubernetes or Container Engine Cluster
    * Clone this repository
@@ -52,3 +54,5 @@ spec:
         app: hello-kubernetes-pod
         visualize: "true"
 ```
+
+[screenshot]: screenshot.png
