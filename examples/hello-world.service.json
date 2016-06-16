@@ -16,7 +16,8 @@
       }
     ],
     "selector": {
-      "app": "hello-kubernetes-pod"
+      "app": "hello-kubernetes-pod",
+      "visualize": "true"
     }
   }
 }
