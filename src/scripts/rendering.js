@@ -5,12 +5,12 @@ const ENTITY_HEIGHT = 95;
 const NODE_SPACE = 30;
 
 const SRV_POD_SPACE_HOR = 190;
-const SRV_POD_SPACE_VER = 40;
 
 const DEPL_MIN_LEFT = 900;
 const DEPL_POD_SPACE = 200;
 
-const GROUP_VER = 40;
+const GROUP_VER = 10;
+const GROUP_LAYER_VER = -10;
 
 const LINE_WIDTH = 3;
 const LINE_RADIUS = 3;
@@ -36,19 +36,23 @@ function renderGroups(groups, jsPlumbInstance) {
     groups.forEach(group => {
         let groupDiv = '<div class="group">';
 
-        if (group.pods) {
-            groupDiv += renderPods(group.pods, y);
-        }
         if (group.services) {
             groupDiv += renderServices(group.services, y);
+            y += group.services.length * ENTITY_HEIGHT + GROUP_LAYER_VER;
+        }
+        if (group.pods) {
+            groupDiv += renderPods(group.pods, y);
+            y += ENTITY_HEIGHT + GROUP_LAYER_VER;
         }
         if (group.deployments) {
-            groupDiv += renderDeployments(group.deployments, (group.pods ? group.pods.length : 0), y);
+            groupDiv += renderDeployments(group.deployments, group.pods, y);
+            y += group.deployments.length * 1.1 * ENTITY_HEIGHT + GROUP_LAYER_VER;
         }
 
         groupDiv += '</div>';
         canvas.insertAdjacentHTML('beforeend', groupDiv);
-        y += 2 * ENTITY_HEIGHT + SRV_POD_SPACE_VER + GROUP_VER;
+
+        y += GROUP_VER;
 
         if (!group.pods) {
             return;
@@ -63,37 +67,6 @@ function renderGroups(groups, jsPlumbInstance) {
         }
     });
     canvas.setAttribute('style', `height: ${groups.length * (ENTITY_HEIGHT * 2.5 + GROUP_VER)}px`);
-}
-
-function connectDeployments(deployments, pods, jsPlumbInstance) {
-    deployments.forEach((deployment, i) => {
-        pods.forEach(pod => {
-            if (extractVersion(deployment.spec.template.spec.containers[0].image) !== extractVersion(pod.spec.containers[0].image)) {
-                return;
-            }
-            jsPlumbInstance.connect({
-                source: `deployment-${deployment.metadata.name}`,
-                target: `pod-${pod.metadata.name}`,
-                anchors: ['Bottom', 'Bottom'],
-                paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLORS_DPL[i & 1] },
-                endpointStyle: { fillStyle: COLORS_DPL[i & 1], radius: LINE_RADIUS },
-            });
-        });
-    });
-}
-
-function connectServices(services, pods, jsPlumbInstance) {
-    services.forEach((service, i) => {
-        pods.forEach(pod => {
-            jsPlumbInstance.connect({
-                source: `service-${service.metadata.name}`,
-                target: `pod-${pod.metadata.name}`,
-                anchors: ['Bottom', 'Top'],
-                paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLORS_SVC[i & 1] },
-                endpointStyle: { fillStyle: COLORS_SVC[i & 1], radius: LINE_RADIUS },
-            });
-        });
-    });
 }
 
 function renderPods(pods, y) {
@@ -113,7 +86,7 @@ function renderPods(pods, y) {
 
         const entity =
             `<div class="window pod ${phase}" title="${name}" id="pod-${name}"
-            style="left: ${x + SRV_POD_SPACE_HOR}px; top: ${y + ENTITY_HEIGHT + SRV_POD_SPACE_VER}px">
+            style="left: ${x + SRV_POD_SPACE_HOR}px; top: ${y}px">
             <span>
             v.${extractVersion(pod.spec.containers[0].image)}
             ${version ? `<br/>${version}` : ''}<br/><br/>
@@ -154,6 +127,35 @@ function renderServices(services, y) {
     return renderedServices;
 }
 
+function renderDeployments(deployments, pods, yOffset) {
+    let renderedDeployments = '';
+    const podsCount = pods ? pods.length : 0;
+
+    deployments.forEach((deployment, index) => {
+        const name = deployment.metadata.name;
+        const version = deployment.metadata.labels.version;
+        const phase = deployment.status.phase ? deployment.status.phase.toLowerCase() : '';
+
+        const x = getDeploymentLeftOffset(deployment, podsCount);
+        const y = yOffset + index * 1.1 * ENTITY_HEIGHT;
+
+        const entity =
+            `<div class="window wide deployment ${phase}" title="${name}" id="deployment-${name}"
+            style="left: ${x}px; top: ${y}px">
+            <span>
+            <div>${name}</div>
+            <br/>
+            <div class="replicas">Replicas: ${deployment.spec.replicas}</div>
+            ${version ? `<br/>${version}` : ''}
+            </span>
+            </div>`;
+
+        renderedDeployments += entity;
+    });
+
+    return renderedDeployments;
+}
+
 function getDeploymentLeftOffset(deployment, podsCount) {
     const calculatedReplicaLeft = DEPL_POD_SPACE + (deployment.status.replicas * 130);
     const calculatedPodsLeft = DEPL_POD_SPACE + (podsCount * 130);
@@ -169,31 +171,35 @@ function getDeploymentLeftOffset(deployment, podsCount) {
     return left;
 }
 
-function renderDeployments(deployments, podsCount, y) {
-    let renderedDeployments = '';
-
-    deployments.forEach((deployment, index) => {
-        const name = deployment.metadata.name;
-        const version = deployment.metadata.labels.version;
-        const phase = deployment.status.phase ? deployment.status.phase.toLowerCase() : '';
-
-        const x = getDeploymentLeftOffset(deployment, podsCount);
-
-        const entity =
-            `<div class="window wide deployment ${phase}" title="${name}" id="deployment-${name}"
-            style="left: ${x}px; top: ${(y + 130 + (index * 1.5 * ENTITY_HEIGHT))}px">
-            <span>
-            <div>${name}</div>
-            <br/>
-            <div class="replicas">Replicas: ${deployment.spec.replicas}</div>
-            ${version ? `<br/>${version}` : ''}
-            </span>
-            </div>`;
-
-        renderedDeployments += entity;
+function connectDeployments(deployments, pods, jsPlumbInstance) {
+    deployments.forEach((deployment, i) => {
+        pods.forEach(pod => {
+            if (extractVersion(deployment.spec.template.spec.containers[0].image) !== extractVersion(pod.spec.containers[0].image)) {
+                return;
+            }
+            jsPlumbInstance.connect({
+                source: `deployment-${deployment.metadata.name}`,
+                target: `pod-${pod.metadata.name}`,
+                anchors: ['Left', 'Bottom'],
+                paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLORS_DPL[i & 1] },
+                endpointStyle: { fillStyle: COLORS_DPL[i & 1], radius: LINE_RADIUS },
+            });
+        });
     });
+}
 
-    return renderedDeployments;
+function connectServices(services, pods, jsPlumbInstance) {
+    services.forEach((service, i) => {
+        pods.forEach(pod => {
+            jsPlumbInstance.connect({
+                source: `service-${service.metadata.name}`,
+                target: `pod-${pod.metadata.name}`,
+                anchors: ['Right', 'Top'],
+                paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLORS_SVC[i & 1] },
+                endpointStyle: { fillStyle: COLORS_SVC[i & 1], radius: LINE_RADIUS },
+            });
+        });
+    });
 }
 
 /**
