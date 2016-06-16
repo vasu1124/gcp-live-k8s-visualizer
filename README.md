@@ -10,9 +10,7 @@ This is a simple visualizer for use with the Kubernetes API.
    * Run `kubectl proxy -w=path/to/gcp-live-k8s-visualizer` or run the script `sh run.sh`
 
 ### Prerequisites
-The visualizer uses labels to organize the visualization.
-
-To enable visualization of kubernetes entities set `visualize` to `true`.
+The visualizer uses labels to organize the visualization. To enable visualization of kubernetes entities set `visualize` to `true`.
 
 Connections and grouping is done as follows.
 
@@ -22,7 +20,7 @@ Connections and grouping is done as follows.
 
   * Deployments are grouped with pods when they are responsible for maintaining the pods.
 
-Here follows minimized `.yaml` files to show the configuration.
+Here follows minimized `.yaml` files to show the configuration, only for examples.
 
 Service configuration
 
