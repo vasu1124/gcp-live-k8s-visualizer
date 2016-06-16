@@ -1,28 +1,27 @@
-'use strict';
+/* global extractVersion, truncate */
+const CANVAS_NODES = '.nodesbar .canvas';
+const CANVAS_CLUSTER = '.cluster .canvas';
+const ENTITY_HEIGHT = 95;
+const NODE_SPACE = 30;
 
-var CANVAS_NODES = '.nodesbar .canvas';
-var CANVAS_CLUSTER = '.cluster .canvas';
-var ENTITY_HEIGHT = 95;
-var NODE_SPACE = 30;
+const SRV_POD_SPACE_HOR = 190;
+const SRV_POD_SPACE_VER = 40;
 
-var SRV_POD_SPACE_HOR = 190;
-var SRV_POD_SPACE_VER = 40;
+const DEPL_MIN_LEFT = 900;
+const DEPL_POD_SPACE = 200;
 
-var DEPL_MIN_LEFT = 900;
-var DEPL_POD_SPACE = 200;
+const GROUP_VER = 40;
 
-var GROUP_VER = 40;
+const LINE_WIDTH = 3;
+const LINE_RADIUS = 3;
 
-var LINE_WIDTH = 3;
-var LINE_RADIUS = 3;
-
-var COLORS_SVC = [
+const COLORS_SVC = [
     '#009939',
-    '#7A0063'
+    '#7A0063',
 ];
-var COLORS_DPL = [
+const COLORS_DPL = [
     '#3369E8',
-    '#FFB521'
+    '#FFB521',
 ];
 
 /**
@@ -32,208 +31,277 @@ var COLORS_DPL = [
  * @param jsPlumbInstance {Object} The jsPlumb instance
  */
 function renderGroups(groups, jsPlumbInstance) {
-    var canvas = document.querySelector(CANVAS_CLUSTER);
-    var y = 0;
+    const canvas = document.querySelector(CANVAS_CLUSTER);
+    let y = 0;
+    groups.forEach(group => {
+        let groupDiv = '<div class="group">';
 
-    forEach(groups, function (index, group) {
-        var groupDiv = '<div class="group">';
-
-        groupDiv += renderPods(group.pods, y);
-        groupDiv += renderServices(group.services, y);
-        groupDiv += renderDeployments(group.deployments, (group.pods ? group.pods.length : 0), y);
+        if (group.pods) {
+            groupDiv += renderPods(group.pods, y);
+        }
+        if (group.services) {
+            groupDiv += renderServices(group.services, y);
+        }
+        if (group.deployments) {
+            groupDiv += renderDeployments(group.deployments, (group.pods ? group.pods.length : 0), y);
+        }
 
         groupDiv += '</div>';
         canvas.insertAdjacentHTML('beforeend', groupDiv);
         y += 2 * ENTITY_HEIGHT + SRV_POD_SPACE_VER + GROUP_VER;
 
-        connectDeployments(group.deployments, group.pods, jsPlumbInstance);
-        connectServices(group.services, group.pods, jsPlumbInstance);
+        if (!group.pods) {
+            return;
+        }
+
+        if (group.deployments) {
+            connectDeployments(group.deployments, group.pods, jsPlumbInstance);
+        }
+
+        if (group.services) {
+            connectServices(group.services, group.pods, jsPlumbInstance);
+        }
+    });
+    canvas.setAttribute('style', `height: ${groups.length * (ENTITY_HEIGHT * 2.5 + GROUP_VER)}px`);
+}
+
+function connectDeployments(deployments, pods, jsPlumbInstance) {
+    deployments.forEach((deployment, i) => {
+        pods.forEach(pod => {
+            if (extractVersion(deployment.spec.template.spec.containers[0].image) !== extractVersion(pod.spec.containers[0].image)) {
+                return;
+            }
+            jsPlumbInstance.connect({
+                source: `deployment-${deployment.metadata.name}`,
+                target: `pod-${pod.metadata.name}`,
+                anchors: ['Bottom', 'Bottom'],
+                paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLORS_DPL[i & 1] },
+                endpointStyle: { fillStyle: COLORS_DPL[i & 1], radius: LINE_RADIUS },
+            });
+        });
+    });
+}
+
+function connectServices(services, pods, jsPlumbInstance) {
+    services.forEach((service, i) => {
+        pods.forEach(pod => {
+            jsPlumbInstance.connect({
+                source: `service-${service.metadata.name}`,
+                target: `pod-${pod.metadata.name}`,
+                anchors: ['Bottom', 'Top'],
+                paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLORS_SVC[i & 1] },
+                endpointStyle: { fillStyle: COLORS_SVC[i & 1], radius: LINE_RADIUS },
+            });
+        });
+    });
+}
+
+function renderPods(pods, y) {
+    let x = 0;
+    let renderedPods = '';
+    pods.forEach(pod => {
+        const name = pod.metadata.name;
+        const version = pod.metadata.labels.version;
+        let phase = pod.status.phase ? pod.status.phase.toLowerCase() : '';
+
+        if ('deletionTimestamp' in pod.metadata) {
+            phase = 'terminating';
+        }
+
+        const nodeName = pod.spec.nodeName;
+        const podIp = pod.status.podIP;
+
+        const entity =
+            `<div class="window pod ${phase}" title="${name}" id="pod-${name}"
+            style="left: ${x + SRV_POD_SPACE_HOR}px; top: ${y + ENTITY_HEIGHT + SRV_POD_SPACE_VER}px">
+            <span>
+            v.${extractVersion(pod.spec.containers[0].image)}
+            ${version ? `<br/>${version}` : ''}<br/><br/>
+            ${nodeName ? truncate(nodeName, 12) : 'None'}<br/><br/>
+            ${podIp ? `<em>${podIp}</em>` : `<em>${phase}</em>`}
+            </span>
+            </div>`;
+        renderedPods += entity;
+
+        x += 130;
+    });
+    return renderedPods;
+}
+
+function renderServices(services, y) {
+    let renderedServices = '';
+    services.forEach(service => {
+        const name = service.metadata.name;
+        const version = service.metadata.labels.version;
+        const phase = service.status.phase ? service.status.phase.toLowerCase() : '';
+        const externalIps = service.spec.externalIPs ? `${service.spec.externalIPs[0]}:${service.spec.ports[0].port}` : undefined;
+        const clusterIp = service.spec.clusterIP;
+        const loadBalancer = service.status.loadBalancer && service.status.loadBalancer.ingress ? service.status.loadBalancer.ingress[0].ip : undefined;
+
+        const entity =
+            `<div class="window wide service ${phase}" title="${name}" id="service-${name}" style="top: ${y}px">
+            <span>
+            <div>${name}</div>
+            ${version ? `<br/>${version}` : ''}
+            ${externalIps ? `<br/><br/><a href="http://${externalIps}" target="_blank" rel="noreferrer nofollow">${externalIps}</a>` : ''}
+            ${clusterIp ? `<br/><br/>${clusterIp}` : ''}
+            ${loadBalancer ? `<br/><a href="http://${loadBalancer}" target="_blank" rel="noreferrer nofollow">${loadBalancer}</a>` : ''}
+            </span>
+            </div>`;
+        renderedServices += entity;
     });
 
+    return renderedServices;
+}
 
-    function connectDeployments(deployments, pods, jsPlumbInstance) {
-        forEach(deployments, function (i, deployment) {
-            forEach(pods, function (j, pod) {
-                if (extractVersion(deployment.spec.template.spec.containers[0].image) !== extractVersion(pod.spec.containers[0].image)) {
-                    return;;
-                }
-                jsPlumbInstance.connect({
-                    source: 'deployment-' + deployment.metadata.name,
-                    target: 'pod-' + pod.metadata.name,
-                    anchors: ['Bottom', 'Bottom'],
-                    paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLORS_DPL[i & 1] },
-                    endpointStyle: { fillStyle: COLORS_DPL[i & 1], radius: LINE_RADIUS }
-                });
-            });
-        });
+function getDeploymentLeftOffset(deployment, podsCount) {
+    const calculatedReplicaLeft = DEPL_POD_SPACE + (deployment.status.replicas * 130);
+    const calculatedPodsLeft = DEPL_POD_SPACE + (podsCount * 130);
+
+    let left;
+    if (DEPL_MIN_LEFT > calculatedReplicaLeft && DEPL_MIN_LEFT > calculatedPodsLeft) {
+        left = DEPL_MIN_LEFT;
+    } else if (calculatedReplicaLeft > DEPL_MIN_LEFT && calculatedReplicaLeft > calculatedPodsLeft) {
+        left = calculatedReplicaLeft;
+    } else {
+        left = calculatedPodsLeft;
+    }
+    return left;
+}
+
+function renderDeployments(deployments, podsCount, y) {
+    let renderedDeployments = '';
+
+    deployments.forEach((deployment, index) => {
+        const name = deployment.metadata.name;
+        const version = deployment.metadata.labels.version;
+        // const phase = deployment.status.phase ? deployment.status.phase.toLowerCase() : '';
+
+        const x = getDeploymentLeftOffset(deployment, podsCount);
+
+        const entity =
+            `<div class="window wide deployment" title="${name}" id="deployment-${name}"
+            style="left: ${x}px; top: ${(y + 130 + (index * 1.5 * ENTITY_HEIGHT))}px">
+            <span>
+            <div>${name}</div>
+            <br/>
+            <div class="replicas">Replicas: ${deployment.spec.replicas}</div>
+            ${version ? `<br/>${version}` : ''}
+            </span>
+            </div>`;
+
+        renderedDeployments += entity;
+    });
+
+    return renderedDeployments;
+}
+
+/**
+ * Get Node provider from provider ID.
+ * Default to RaspberryPi.
+ *
+ * @param {Object} node The node.
+ * @returns Identified provider name or 'pi'.
+ */
+function getNodeProvider(node) {
+    if (!node || !node.spec || !node.spec.providerID) {
+        return 'pi';
     }
 
-    function connectServices(services, pods, jsPlumbInstance) {
-        forEach(services, function (i, service) {
-            forEach(pods, function (j, pod) {
-                jsPlumbInstance.connect({
-                    source: 'service-' + service.metadata.name,
-                    target: 'pod-' + pod.metadata.name,
-                    anchors: ['Bottom', 'Top'],
-                    paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLORS_SVC[i & 1] },
-                    endpointStyle: { fillStyle: COLORS_SVC[i & 1], radius: LINE_RADIUS }
-                });
-            });
-        });
-    }
-
-    function renderPods(pods, y) {
-        var x = 0;
-        var renderedPods = '';
-        forEach(pods, function (index, pod) {
-            var name = pod.metadata.name;
-            var version = pod.metadata.labels.version;
-            var phase = pod.status.phase ? pod.status.phase.toLowerCase() : '';
-
-            if ('deletionTimestamp' in pod.metadata) {
-                phase = 'terminating';
-            }
-
-            var nodeName = pod.spec.nodeName;
-            var podIp = pod.status.podIP;
-
-            var entity =
-                '<div class="window pod ' + phase + '" title="' + name + '" id="pod-' + name +
-                '" style="left: ' + (x + SRV_POD_SPACE_HOR) + 'px; top: ' + (y + ENTITY_HEIGHT + SRV_POD_SPACE_VER) + 'px">' +
-                '<span>' +
-                "v." + extractVersion(pod.spec.containers[0].image) +
-                (version ? "<br/>" + version : "") + "<br/><br/>" +
-                (nodeName ? truncate(nodeName, 12) : "None") + "<br/><br/>" +
-                (podIp ? "<em>" + podIp + "</em>" : "<em>" + phase + "</em>") +
-                '</span>' +
-                '</div>';
-            renderedPods += entity;
-
-            x += 130;
-        });
-        return renderedPods;
-    }
-
-    function renderServices(services, y) {
-        var renderedServices = '';
-        forEach(services, function (index, service) {
-            var name = service.metadata.name;
-            var version = service.metadata.labels.version;
-            var phase = service.status.phase ? service.status.phase.toLowerCase() : '';
-            var externalIps = service.spec.externalIPs;
-            var clusterIp = service.spec.clusterIP;
-            var loadBalancer = service.status.loadBalancer && service.status.loadBalancer.ingress ? service.status.loadBalancer.ingress[0].ip : undefined;
-
-            var entity =
-                '<div class="window wide service ' + phase + '" title="' + name + '" id="service-' + name + '" ' +
-                'style="top: ' + y + 'px">' +
-                '<span>' +
-                '<div>' + name + '</div>' +
-                (version ? "<br/>" + version : '') +
-                (externalIps ? '<br/><br/><a href="http://' + externalIps[0] + ':' + service.spec.ports[0].port + '" target="_blank" rel="noreferrer nofollow">' + externalIps[0] + ':' + service.spec.ports[0].port + '</a>' : '') +
-                (clusterIp ? '<br/><br/>' + clusterIp : '') +
-                (loadBalancer ? '<br/><a href="http://' + loadBalancer + '" target="_blank" rel="noreferrer nofollow">' + loadBalancer + '</a>' : '') +
-                '</span>' +
-                '</div>';
-            renderedServices += entity;
-        });
-
-        return renderedServices;
-    }
-
-    function renderDeployments(deployments, podsCount, y) {
-        var renderedDeployments = '';
-
-        forEach(deployments, function (index, deployment) {
-            var name = deployment.metadata.name;
-            var version = deployment.metadata.labels.version;
-            var phase = deployment.status.phase ? deployment.status.phase.toLowerCase() : '';
-
-            var x = getDeploymentLeftOffset(deployment, podsCount);
-
-            var entity =
-                '<div class="window wide deployment" title="' + name + '" id="deployment-' + name + '" ' +
-                'style="left: ' + x + 'px; top: ' + (y + 130 + (index * 1.5 * ENTITY_HEIGHT)) + 'px">' +
-                '<span>' +
-                '<div>' + name + '</div>' +
-                '<br/>' +
-                '<div class="replicas">Replicas: ' + deployment.spec.replicas + "</div>" +
-                (version ? "<br/>" + version : "") +
-                '</span>' +
-                '</div>';
-
-            renderedDeployments += entity;
-        });
-
-        return renderedDeployments;
-    }
-
-    function getDeploymentLeftOffset(deployment, podsCount) {
-        var calculatedReplicaLeft = DEPL_POD_SPACE + (deployment.status.replicas * 130);
-        var calculatedPodsLeft = DEPL_POD_SPACE + (podsCount * 130);
-
-        var left;
-        if (DEPL_MIN_LEFT > calculatedReplicaLeft && DEPL_MIN_LEFT > calculatedPodsLeft) {
-            left = DEPL_MIN_LEFT;
-        } else if (calculatedReplicaLeft > DEPL_MIN_LEFT && calculatedReplicaLeft > calculatedPodsLeft) {
-            left = calculatedReplicaLeft;
-        } else {
-            left = calculatedPodsLeft;
-        }
-        return left;
+    const provider = node.spec.providerID.split(':')[0];
+    switch (provider) {
+    case 'gce':
+        return 'gce';
+    default:
+        return 'pi';
     }
 }
 
-
+/**
+ * Render cluster nodes.
+ */
 function renderNodes(nodes) {
-    var x = 0;
-    var nodesbar = document.querySelector(CANVAS_NODES);
+    let x = 0;
+    const nodesbar = document.querySelector(CANVAS_NODES);
 
-    forEach(nodes, function (i, node) {
-        var ready;
-        for (var j = 0; j < node.status.conditions.length; j++) {
-            var condition = node.status.conditions[j];
+    nodes.forEach(node => {
+        let ready;
+        for (let j = 0; j < node.status.conditions.length; j++) {
+            const condition = node.status.conditions[j];
 
             if (condition.type === 'Ready') {
-                ready = (condition.status === 'True' ? 'ready' : 'not-ready')
+                ready = (condition.status === 'True' ? 'ready' : 'not-ready');
                 break;
             }
         }
 
-        var provider = getNodeProvider(node);
+        const provider = getNodeProvider(node);
 
-        var nodeElement =
-            '<div>' +
-            '<a href="http://' + node.metadata.name + ':4194/"' +
-            'target="_blank" rel="noreferrer nofollow"' +
-            'id="node-' + node.metadata.name + '"' +
-            'class="window node ' + ready + '"' +
-            'title="' + node.metadata.name + '"' +
-            'style="left: ' + x + 'px">' +
-            '<img src="assets/providers/' + provider + '.png" class="provider-logo" />' +
-            '<span><p class="nodetitle">Node</p><br/>' +
-            truncate(node.metadata.name, 12) + '</span>' +
-            '</a>' +
-            '</div>';
+        const nodeElement =
+            `<div>
+            <a href="http://${node.metadata.name}:4194/"
+            target="_blank" rel="noreferrer nofollow"
+            id="node-${node.metadata.name}"
+            class="window node ${ready}"
+            title="${node.metadata.name}"
+            style="left: ${x}px">
+            <img src="assets/providers/${provider}.png" class="provider-logo" />
+            <span><p class="nodetitle">Node</p><br/>
+            ${truncate(node.metadata.name, 12)}</span>
+            </a>
+            </div>`;
 
         nodesbar.insertAdjacentHTML('beforeend', nodeElement);
 
         x += 93 + NODE_SPACE;
     });
+}
 
-    function getNodeProvider(node) {
-        if (!node || !node.spec || !node.spec.providerID) {
-            return '';
-        }
+/**
+ * Hide error notification.
+ * @param {HTMLElement} element The element.
+ */
+function hideError(element) {
+    if (element.classList.contains('hide')) {
+        return;
+    }
 
-        var provider = node.spec.providerID.split(':')[0];
-        switch (provider) {
-            case 'gce':
-                return 'gce';
-            default:
-                return 'pi';
+    addClass(element, 'hide');
+}
+
+/**
+ * Show error notification.
+ * @param {HTMLElement} element The element.
+ * @param {Object} error Error object.
+ */
+function showError(element, errorObject) {
+    removeClass(element, 'hide');
+    if (errorObject) {
+        const messageElement = element.getElementsByClassName('message')[0];
+        if (errorObject.error) {
+            messageElement.innerHTML = 'No connection';
+        } else if (errorObject.timeout) {
+            messageElement.innerHTML = 'Timeout exceeded';
+        } else {
+            messageElement.innerHTML = `${errorObject.httpRequest.status}: ${errorObject.httpRequest.statusText}`;
         }
     }
 }
 
+/**
+ * Remove class from element.
+ * @param {HTMLElement} element The element.
+ * @param {string} className The class name to remove.
+ */
+function removeClass(element, className) {
+    element.className = element.className.replace(new RegExp(`(?:^|\\s)${className}(?!\\S)`), '');
+}
 
+/**
+ * Add class to element.
+ * @param {HTMLElement} element The element.
+ * @param {string} className The class name to add.
+ */
+function addClass(element, className) {
+    element.className = `${element.className} ${className}`;
+}

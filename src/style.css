@@ -97,8 +97,25 @@ a, a:visited {
 .navbar .header-title {
   float: right;
   margin-right: 50px;
+  margin-left: 30px;
   color: white;
   font-weight: 600;
+}
+
+.navbar .error {
+  float: right;
+  color: white;
+  background-color: red;
+  margin-left: 10px;
+  padding: 4px 10px;
+}
+
+.navbar .error .message {
+  font-size: 0.9em;
+}
+
+.navbar .hide {
+  display: none;
 }
 
 /* Nodes bar */

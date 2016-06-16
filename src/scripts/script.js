@@ -13,246 +13,259 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+/* global jsPlumb, renderGroups, renderNodes, forProperty, matchObjects, addClass, removeClass */
 
-(function () {
+const UPDATE_INTERVAL = 3000;
+const REQUEST_TIMEOUT = 2000;
 
-    var UPDATE_INTERVAL = 3000;
-    var REQUEST_TIMEOUT = 2000;
+let pods;
+let services;
+let deployments;
+let nodes;
+let groups;
 
-    var pods;
-    var services;
-    var deployments;
-    var groups;
+jsPlumb.ready(() => {
+    const clusterInstance = jsPlumb.getInstance();
 
-    jsPlumb.ready(function () {
-        var clusterInstance = jsPlumb.getInstance();
+    setDefaults(clusterInstance);
+    draw(clusterInstance);
 
-        setDefaults(clusterInstance);
+    setInterval(() => {
         draw(clusterInstance);
+    }, UPDATE_INTERVAL);
+});
 
-        // setInterval(function () {
-        //     draw(clusterInstance);
-        // }, UPDATE_INTERVAL);
+function draw(clusterInstance) {
+    pods = [];
+    services = [];
+    deployments = [];
+    nodes = [];
+    groups = [];
+
+    loadData().then(() => {
+        document.querySelector(CANVAS_CLUSTER).innerHTML = '';
+        document.querySelector(CANVAS_NODES).innerHTML = '';
+
+        groupByName();
+        clusterInstance.batch(() => {
+            clusterInstance.detachEveryConnection();
+            clusterInstance.deleteEveryEndpoint();
+
+            renderNodes(nodes);
+            renderGroups(groups, clusterInstance);
+        });
+    });
+}
+
+function setDefaults(clusterInstance) {
+    clusterInstance.importDefaults({
+        Connector: ['Flowchart', { cornerRadius: 5 }],
+    });
+}
+
+function loadData() {
+    const requests = [];
+
+    const podErrorElement = document.getElementById('pod-error');
+    const deploymentErrorElement = document.getElementById('deployment-error');
+    const serviceErrorElement = document.getElementById('service-error');
+    const nodeErrorElement = document.getElementById('node-error');
+
+    // const podsReq = getJson('/api/v1/pods?labelSelector=visualize%3Dtrue')
+    const podsReq = getJson('pods.json')
+        .then((data) => {
+            pods = data.items;
+            hideError(podErrorElement);
+        }, (error) => {
+            showError(podErrorElement, error);
+        });
+    requests.push(podsReq);
+
+    // const deploymentsReq = getJson('/apis/extensions/v1beta1/namespaces/default/deployments/?labelSelector=visualize%3Dtrue')
+    const deploymentsReq = getJson('deployment.json')
+        .then((data) => {
+            deployments = data.items;
+            hideError(deploymentErrorElement);
+        }, (error) => {
+            showError(deploymentErrorElement, error);
+        });
+    requests.push(deploymentsReq);
+
+    // const servicesReq = getJson('/api/v1/services?labelSelector=visualize%3Dtrue')
+    const servicesReq = getJson('service.json')
+        .then((data) => {
+            services = data.items;
+            hideError(serviceErrorElement);
+        }, (error) => {
+            showError(serviceErrorElement, error);
+        });
+    requests.push(servicesReq);
+
+    // const nodesReq = getJson('/api/v1/nodes')
+    const nodesReq = getJson('nodes.json')
+        .then((data) => {
+            nodes = data.items;
+            hideError(nodeErrorElement);
+        }, (error) => {
+            showError(nodeErrorElement, error);
+        });
+    requests.push(nodesReq);
+
+    return Promise.all(requests);
+}
+
+function getJson(url) {
+    const promise = new Promise((resolve, reject) => {
+        const httpRequest = new XMLHttpRequest();
+
+        httpRequest.onload = () => {
+            if (httpRequest.status === 200) {
+                const data = JSON.parse(httpRequest.responseText);
+
+                resolve(data);
+            } else {
+                reject({ httpRequest });
+            }
+        };
+
+        httpRequest.onerror = error => {
+            reject({ httpRequest, error });
+        };
+
+        httpRequest.ontimeout = timeout => {
+            reject({ httpRequest, timeout });
+        };
+
+        httpRequest.open('GET', url, true);
+        httpRequest.timeout = REQUEST_TIMEOUT;
+        httpRequest.send();
     });
 
-    function draw(clusterInstance) {
-        pods = [];
-        services = [];
-        deployments = [];
-        nodes = [];
-        groups = [];
+    return promise;
+}
 
-        loadData().then(function () {
-            document.querySelector(CANVAS_CLUSTER).innerHTML = '';
-            document.querySelector(CANVAS_NODES).innerHTML = '';
+/**
+ * Group all services, pods and deployments into groups array.
+ */
+function groupByName() {
+    services.forEach(insertService);
+    pods.forEach(insertPod);
+    deployments.forEach(insertDeployment);
+}
 
-            groupByName();
-            clusterInstance.batch(function () {
-                clusterInstance.detachEveryConnection();
-                clusterInstance.deleteEveryEndpoint();
+/**
+ * Insert service into groups array according to the spec.selector property.
+ *
+ * @param {Object} service The service.
+ */
+function insertService(service) {
+    if (!service || !service.spec || !service.spec.selector) {
+        return;
+    }
+    const selector = service.spec.selector;
 
-                renderNodes(nodes);
-                renderGroups(groups, clusterInstance);
-            });
+    const groupIndex = getGroupIndex(selector);
+
+    if (groupIndex > -1) {
+        groups[groupIndex].services.push(service);
+    } else {
+        groups.push({
+            identifier: selector,
+            services: [service],
         });
     }
+}
 
-    function setDefaults(clusterInstance) {
-        clusterInstance.importDefaults({
-            Connector: ["Flowchart", { cornerRadius: 5 }]
+/**
+ * Insert pod into groups array according to the metadata.labels property.
+ *
+ * @param {Object} pod The pod.
+ */
+function insertPod(pod) {
+    if (!pod || !pod.metadata || !pod.metadata.labels) {
+        return;
+    }
+
+    const labels = pod.metadata.labels;
+
+    const groupIndex = getGroupIndex(labels);
+
+    if (groupIndex > -1) {
+        if (!groups[groupIndex].pods) {
+            groups[groupIndex].pods = [];
+        }
+        groups[groupIndex].pods.push(pod);
+    } else {
+        sanitizePodLabels(labels);
+        groups.push({
+            identifier: labels,
+            pods: [pod],
         });
     }
+}
 
-
-    function loadData() {
-        var requests = [];
-
-        // var podsReq = getJson('/api/v1/pods?labelSelector=visualize%3Dtrue')
-        var podsReq = getJson('pods.json')
-            .then(function (data) {
-                pods = data.items;
-            }, function (error) {
-                console.error('pods not found', error);
-            });
-        requests.push(podsReq);
-
-        // var deploymentsReq = getJson('/apis/extensions/v1beta1/namespaces/default/deployments/?labelSelector=visualize%3Dtrue')
-        var deploymentsReq = getJson('deployment.json')
-            .then(function (data) {
-                deployments = data.items;
-            }, function (error) {
-                console.error('deployments not found', error);
-            });
-        requests.push(deploymentsReq);
-
-        // var servicesReq = getJson('/api/v1/services?labelSelector=visualize%3Dtrue')
-        var servicesReq = getJson('service.json')
-            .then(function (data) {
-                services = data.items;
-            }, function (error) {
-                console.error('services not found', error);
-            });
-        requests.push(servicesReq);
-
-        // var nodesReq = getJson('/api/v1/nodes')
-        var nodesReq = getJson('nodes.json')
-            .then(function (data) {
-                nodes = data.items;
-            }, function (error) {
-                console.error('nodes not found', error);
-            });
-        requests.push(nodesReq);
-
-        return Promise.all(requests);
-    }
-
-    function getJson(url) {
-        var promise = new Promise(function (resolve, reject) {
-            var httpRequest = new XMLHttpRequest();
-
-            httpRequest.onload = function () {
-                if (httpRequest.status === 200) {
-                    var data = JSON.parse(httpRequest.responseText);
-
-                    resolve(data);
-                } else {
-                    reject(Error(httpRequest.statusText));;
-                }
-            };
-
-            httpRequest.onerror = function () {
-                reject(Error('Network error'));
-            };
-
-            httpRequest.ontimeout = function () {
-                reject(Error('Network timeout'));
-            };
-
-            httpRequest.open('GET', url, true);
-            httpRequest.timeout = REQUEST_TIMEOUT;
-            httpRequest.send();
-        });
-
-        return promise;
-    }
-
-    /**
-     * Group all services, pods and deployments into groups array.
-     */
-    function groupByName() {
-        forEach(services, insertService);
-        forEach(pods, insertPod);
-        forEach(deployments, insertDeployment);
-    }
-
-    /**
-     * Insert service into groups array according to the spec.selector property.
-     *
-     * @param {number} index The index of iteration.
-     * @param {Object} service The service.
-     */
-    function insertService(index, service) {
-        if (!service || !service.spec || !service.spec.selector) {
-            return;
+/**
+ * Remove unique identifiers in pod labels.
+ * GCE adds a pod-template-hash to Pods created with a deployment.
+ * This breaks grouping capabilities and is not needed elsewhere.
+ *
+ * @param {Object} labels The labels.
+ */
+function sanitizePodLabels(labels) {
+    forProperty(labels, key => {
+        if (key.search('-hash') > -1) {
+            /* eslint-disable no-param-reassign */
+            delete labels[key];
+            /* eslint-enable no-param-reassign */
         }
-        var selector = service.spec.selector;
+    });
+}
 
-        var groupIndex = getGroupIndex(selector);
-
-        if (groupIndex > -1) {
-            groups[groupIndex].services.push(service);
-        } else {
-            groups.push({
-                identifier: selector,
-                services: [service]
-            });
-        }
+/**
+ * Insert deployments into groups array according to the
+ * generated selector.matchLabels property.
+ *
+ * @param {Object} deployment The deployment.
+ */
+function insertDeployment(deployment) {
+    if (
+        !deployment ||
+        !deployment.spec.selector ||
+        !deployment.spec.selector.matchLabels ||
+        !deployment.spec.selector.matchLabels.app ||
+        !deployment.metadata.name
+    ) {
+        return;
     }
 
-    /**
-     * Insert pod into groups array according to the metadata.labels property.
-     *
-     * @param {number} index The index of iteration.
-     * @param {Object} pod The pod.
-     */
-    function insertPod(index, pod) {
-        if (!pod || !pod.metadata || !pod.metadata.labels) {
-            return;
+    const labels = deployment.spec.selector.matchLabels;
+    const groupIndex = getGroupIndex(labels);
+
+    if (groupIndex > -1) {
+        if (!groups[groupIndex].deployments) {
+            groups[groupIndex].deployments = [];
         }
-
-        var labels = pod.metadata.labels;
-
-        var groupIndex = getGroupIndex(labels);
-
-        if (groupIndex > -1) {
-            if (!groups[groupIndex].pods) {
-                groups[groupIndex].pods = [];
-            }
-            groups[groupIndex].pods.push(pod);
-        } else {
-            sanitizePodLabels(labels);
-            groups.push({
-                identifier: labels,
-                pods: [pod]
-            });
-        }
-    }
-
-    /**
-     * Remove unique identifiers in pod labels.
-     * GCE adds a pod-template-hash to Pods created with a deployment.
-     * This breaks grouping capabilities and is not needed elsewhere.
-     *
-     * @param {Object} labels The labels.
-     */
-    function sanitizePodLabels(labels) {
-        forProperty(labels, function (key, value) {
-            if (key.search('-hash') > -1) {
-                delete labels[key];
-            }
+        groups[groupIndex].deployments.push(deployment);
+    } else {
+        groups.push({
+            identifier: labels,
+            deployments: [deployment],
         });
     }
+}
 
-    /**
-     * Insert deployments into groups array according to the
-     * generated selector.matchLabels property.
-     *
-     * @param {number} index The index of iteration.
-     * @param {Object} deployment The deployment.
-     */
-    function insertDeployment(index, deployment) {
-        if (!deployment || !deployment.spec.selector || !deployment.spec.selector.matchLabels || !deployment.spec.selector.matchLabels.app || !deployment.metadata.name) {
-            return;
-        }
-        var labels = deployment.spec.selector.matchLabels;
-        var groupIndex = getGroupIndex(labels);
-
-        if (groupIndex > -1) {
-            if (!groups[groupIndex].deployments) {
-                groups[groupIndex].deployments = [];
-            }
-            groups[groupIndex].deployments.push(deployment);
-        } else {
-            groups.push({
-                identifier: labels,
-                deployments: [deployment]
-            });
+/**
+ * Find array index of group by matching object with identifier.
+ * If not found return -1.
+ *
+ * @param {Object} object The object to match with.
+ */
+function getGroupIndex(object) {
+    for (let index = 0; index < groups.length; index++) {
+        if (matchObjects(object, groups[index].identifier)) {
+            return index;
         }
     }
 
-    /**
-     * Find array index of group by matching object with identifier.
-     * If not found return -1.
-     *
-     * @param {Object} object The object to match with.
-     */
-    function getGroupIndex(object) {
-        for (var index = 0; index < groups.length; index++) {
-            if (matchObjects(object, groups[index].identifier)) {
-                return index;
-            }
-        }
-
-        return -1;
-    }
-})();
+    return -1;
+}

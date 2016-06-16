@@ -8,32 +8,17 @@
  * @param left {boolean} If true truncate at the end.
  */
 function truncate(str, length, left) {
-    if (!str) return '';
+    if (!str) {
+        return '';
+    }
 
     if (str.length > length) {
         if (left) {
-            return str.slice(0, length) + '...';
-        } else {
-            return '...' + str.slice(str.length - length, str.length);
+            return `${str.slice(0, length)}...`;
         }
+        return `...${str.slice(str.length - length, str.length)}`;
     }
     return str;
-}
-
-/**
- * For each object in array.
- *
- * @param array The array.
- * @param delegate The delegate (index, value).
- */
-function forEach(array, delegate) {
-    if (!array) {
-        return;
-    }
-
-    for (var i = 0; i < array.length; i++) {
-        delegate(i, array[i]);
-    }
 }
 
 /**
@@ -43,11 +28,11 @@ function forEach(array, delegate) {
  * @param {function(key, value)} delegate The function to call for each property-
  */
 function forProperty(object, delegate) {
-    for (var key in object) {
-        if (object.hasOwnProperty(key)) {
+    Object.keys(object).forEach(key => {
+        if (Object.hasOwnProperty.bind(object, key)) {
             delegate(key, object[key]);
         }
-    }
+    });
 }
 
 /**
@@ -55,14 +40,13 @@ function forProperty(object, delegate) {
  * If no version number is present, return 'latest'.
  */
 function extractVersion(image) {
-    var temp = image.split(':');
+    const temp = image.split(':');
     if (temp.length > 2) {
         return temp[2];
-    }
-    else if (temp.length > 1) {
+    } else if (temp.length > 1) {
         return temp[1];
     }
-    return 'latest'
+    return 'latest';
 }
 
 /**
@@ -70,8 +54,8 @@ function extractVersion(image) {
  * Return true if all properties are equal.
  */
 function matchObjects(objectA, objectB) {
-    var match = true;
-    forProperty(objectB, function (key, value) {
+    let match = true;
+    forProperty(objectB, (key, value) => {
         if (objectA[key] !== value) {
             match = false;
         }
