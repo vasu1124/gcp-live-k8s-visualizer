@@ -81,7 +81,6 @@ function renderPods(pods, y) {
             phase = 'terminating';
         }
 
-        const nodeName = pod.spec.nodeName;
         const podIp = pod.status.podIP;
 
         const entity =
@@ -90,7 +89,7 @@ function renderPods(pods, y) {
             <span>
             v.${extractVersion(pod.spec.containers[0].image)}
             ${version ? `<br/>${version}` : ''}<br/><br/>
-            ${nodeName ? truncate(nodeName, 12) : 'None'}<br/><br/>
+            ${name ? truncate(name, 28) : 'No name'}<br/><br/>
             ${podIp ? `<em>${podIp}</em>` : `<em>${phase}</em>`}
             </span>
             </div>`;
@@ -250,13 +249,9 @@ function renderNodes(nodes) {
 
         const nodeElement =
             `<div>
-            <a href="http://${node.metadata.name}:4194/"
-            target="_blank" rel="noreferrer nofollow"
-            id="node-${node.metadata.name}"
-            class="window node ${ready}"
-            title="${node.metadata.name}"
-            style="left: ${x}px">
-            <img src="assets/providers/${provider}.png" class="provider-logo" />
+            <a href="http://${node.metadata.name}:4194/" target="_blank" rel="noreferrer nofollow"
+            id="node-${node.metadata.name}" class="window node ${ready}" title="${node.metadata.name}" style="left: ${x}px">
+            ${provider ? `<img src="assets/providers/${provider}.png" class="provider-logo" />` : ''}
             <span><p class="nodetitle">Node</p><br/>
             ${truncate(node.metadata.name, 12)}</span>
             </a>
