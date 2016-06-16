@@ -38,7 +38,7 @@ function renderGroups(groups, jsPlumbInstance) {
 
         if (group.services) {
             groupDiv += renderServices(group.services, y);
-            y += group.services.length * ENTITY_HEIGHT + GROUP_LAYER_VER;
+            y += group.services.length * 1.1 * ENTITY_HEIGHT + GROUP_LAYER_VER;
         }
         if (group.pods) {
             groupDiv += renderPods(group.pods, y);
@@ -66,7 +66,7 @@ function renderGroups(groups, jsPlumbInstance) {
             connectServices(group.services, group.pods, jsPlumbInstance);
         }
     });
-    canvas.setAttribute('style', `height: ${groups.length * (ENTITY_HEIGHT * 2.5 + GROUP_VER)}px`);
+    canvas.setAttribute('style', `height: ${y}px`);
 }
 
 function renderPods(pods, y) {
@@ -101,15 +101,16 @@ function renderPods(pods, y) {
     return renderedPods;
 }
 
-function renderServices(services, y) {
+function renderServices(services, yOffset) {
     let renderedServices = '';
-    services.forEach(service => {
+    services.forEach((service, index) => {
         const name = service.metadata.name;
         const version = service.metadata.labels.version;
         const phase = service.status.phase ? service.status.phase.toLowerCase() : '';
         const externalIps = service.spec.externalIPs ? `${service.spec.externalIPs[0]}:${service.spec.ports[0].port}` : undefined;
         const clusterIp = service.spec.clusterIP;
         const loadBalancer = service.status.loadBalancer && service.status.loadBalancer.ingress ? service.status.loadBalancer.ingress[0].ip : undefined;
+        const y = yOffset + index * 1.1 * ENTITY_HEIGHT;
 
         const entity =
             `<div class="window wide service ${phase}" title="${name}" id="service-${name}" style="top: ${y}px">
@@ -191,6 +192,10 @@ function connectDeployments(deployments, pods, jsPlumbInstance) {
 function connectServices(services, pods, jsPlumbInstance) {
     services.forEach((service, i) => {
         pods.forEach(pod => {
+            if (!matchObjects(pod.metadata.labels, service.spec.selector)) {
+                return;
+            }
+
             jsPlumbInstance.connect({
                 source: `service-${service.metadata.name}`,
                 target: `pod-${pod.metadata.name}`,

@@ -51,7 +51,7 @@ function extractVersion(image) {
 
 /**
  * Match object properties.
- * Return true if all properties are equal.
+ * Return true if all properties of objectB excists on objectA.
  */
 function matchObjects(objectA, objectB) {
     let match = true;
