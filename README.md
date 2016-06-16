@@ -12,11 +12,13 @@ The visualizer uses labels to organize the visualization.
 
 To enable visualization of kubernetes entities set `visualize` to `true`.
 
-  * Pods are identified with the label `app`.
+Connections and grouping is done as follows.
 
-  * Services by a selector property named `app`.
+  * Pods are grouped with services if labels match service selectors.
 
-  * Deployments by their template label `app`.
+  * A Service is connected to a pod when the selector matches.
+
+  * Deployments are grouped with pods when they are responsible for maintaining the pods.
 
 Here follows minimized `.yaml` files to show the configuration.
 
