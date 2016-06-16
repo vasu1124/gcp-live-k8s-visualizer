@@ -7,7 +7,7 @@ This is a simple visualizer for use with the Kubernetes API.
 ### Usage:
    * First install a Kubernetes or Container Engine Cluster
    * Clone this repository
-   * Run `kubectl proxy -w=path/to/gcp-live-k8s-visualizer`
+   * Run `kubectl proxy -w=path/to/gcp-live-k8s-visualizer` or run the script `sh run.sh`
 
 ### Prerequisites
 The visualizer uses labels to organize the visualization.
