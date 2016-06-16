@@ -71,8 +71,8 @@ function loadData() {
     const serviceErrorElement = document.getElementById('service-error');
     const nodeErrorElement = document.getElementById('node-error');
 
-    // const podsReq = getJson('/api/v1/pods?labelSelector=visualize%3Dtrue')
-    const podsReq = getJson('pods.json')
+    const podsReq = getJson('/api/v1/pods?labelSelector=visualize%3Dtrue')
+    // const podsReq = getJson('pods.json')
         .then((data) => {
             pods = data.items;
             hideError(podErrorElement);
@@ -81,8 +81,8 @@ function loadData() {
         });
     requests.push(podsReq);
 
-    // const deploymentsReq = getJson('/apis/extensions/v1beta1/namespaces/default/deployments/?labelSelector=visualize%3Dtrue')
-    const deploymentsReq = getJson('deployment.json')
+    const deploymentsReq = getJson('/apis/extensions/v1beta1/namespaces/default/deployments/?labelSelector=visualize%3Dtrue')
+    // const deploymentsReq = getJson('deployment.json')
         .then((data) => {
             deployments = data.items;
             hideError(deploymentErrorElement);
@@ -91,8 +91,8 @@ function loadData() {
         });
     requests.push(deploymentsReq);
 
-    // const servicesReq = getJson('/api/v1/services?labelSelector=visualize%3Dtrue')
-    const servicesReq = getJson('service.json')
+    const servicesReq = getJson('/api/v1/services?labelSelector=visualize%3Dtrue')
+    // const servicesReq = getJson('service.json')
         .then((data) => {
             services = data.items;
             hideError(serviceErrorElement);
@@ -101,8 +101,8 @@ function loadData() {
         });
     requests.push(servicesReq);
 
-    // const nodesReq = getJson('/api/v1/nodes')
-    const nodesReq = getJson('nodes.json')
+    const nodesReq = getJson('/api/v1/nodes')
+    // const nodesReq = getJson('nodes.json')
         .then((data) => {
             nodes = data.items;
             hideError(nodeErrorElement);
