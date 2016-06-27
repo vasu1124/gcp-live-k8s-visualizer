@@ -1,19 +1,21 @@
-/* global extractVersion, truncate */
+/* global extractVersion, truncate, matchObjects */
+
 const CANVAS_NODES = '.nodesbar .canvas';
 const CANVAS_CLUSTER = '.cluster .canvas';
-const ENTITY_HEIGHT = 95;
+
 const NODE_SPACE = 30;
+const ENTITY_HEIGHT = 95;
 
 const SRV_POD_SPACE_HOR = 190;
-
+const POD_SPACE_HOR = 130;
 const DEPL_MIN_LEFT = 900;
 const DEPL_POD_SPACE = 200;
 
-const GROUP_VER = 10;
-const GROUP_LAYER_VER = -10;
+const GROUP_VERTICAL_SPACE = 10;
+const GROUP_VERTICAL_LAYER_SPACE = -10;
 
-const LINE_WIDTH = 3;
-const LINE_RADIUS = 3;
+const CONN_LINE_WIDTH = 3;
+const CONN_LINE_RADIUS = 3;
 
 const COLORS_SVC = [
     '#009939',
@@ -26,9 +28,8 @@ const COLORS_DPL = [
 
 /**
  * Render all groups to the supplied jsPlumb instance.
- *
- * @param groups {Array} The array of groups.
- * @param jsPlumbInstance {Object} The jsPlumb instance
+ * @param {Array} groups  The array of groups.
+ * @param {Object} jsPlumbInstance The jsPlumb instance
  */
 function renderGroups(groups, jsPlumbInstance) {
     const canvas = document.querySelector(CANVAS_CLUSTER);
@@ -38,21 +39,21 @@ function renderGroups(groups, jsPlumbInstance) {
 
         if (group.services) {
             groupDiv += renderServices(group.services, y);
-            y += group.services.length * 1.1 * ENTITY_HEIGHT + GROUP_LAYER_VER;
+            y += group.services.length * 1.1 * ENTITY_HEIGHT + GROUP_VERTICAL_LAYER_SPACE;
         }
         if (group.pods) {
             groupDiv += renderPods(group.pods, y);
-            y += ENTITY_HEIGHT + GROUP_LAYER_VER;
+            y += ENTITY_HEIGHT + GROUP_VERTICAL_LAYER_SPACE;
         }
         if (group.deployments) {
             groupDiv += renderDeployments(group.deployments, group.pods, y);
-            y += group.deployments.length * 1.1 * ENTITY_HEIGHT + GROUP_LAYER_VER;
+            y += group.deployments.length * 1.1 * ENTITY_HEIGHT + GROUP_VERTICAL_LAYER_SPACE;
         }
 
         groupDiv += '</div>';
         canvas.insertAdjacentHTML('beforeend', groupDiv);
 
-        y += GROUP_VER;
+        y += GROUP_VERTICAL_SPACE;
 
         if (!group.pods) {
             return;
@@ -69,7 +70,12 @@ function renderGroups(groups, jsPlumbInstance) {
     canvas.setAttribute('style', `height: ${y}px`);
 }
 
-function renderPods(pods, y) {
+/**
+ * Render pods relative to the supplied yOffset.
+ * @param {Array} pods The pods to render.
+ * @param {number} yOffset The y axis offset to render the deployments with.
+ */
+function renderPods(pods, yOffset) {
     let x = 0;
     let renderedPods = '';
     pods.forEach(pod => {
@@ -85,7 +91,7 @@ function renderPods(pods, y) {
 
         const entity =
             `<div class="window pod ${phase}" title="${name}" id="pod-${name}"
-            style="left: ${x + SRV_POD_SPACE_HOR}px; top: ${y}px">
+            style="left: ${x + SRV_POD_SPACE_HOR}px; top: ${yOffset}px">
             <span>
             v.${extractVersion(pod.spec.containers[0].image)}
             ${version ? `<br/>${version}` : ''}<br/><br/>
@@ -95,11 +101,16 @@ function renderPods(pods, y) {
             </div>`;
         renderedPods += entity;
 
-        x += 130;
+        x += POD_SPACE_HOR;
     });
     return renderedPods;
 }
 
+/**
+ * Render services relative to the supplied yOffset.
+ * @param {Array} deployments The deployments to render.
+ * @param {number} yOffset The y axis offset to render the deployments with.
+ */
 function renderServices(services, yOffset) {
     let renderedServices = '';
     services.forEach((service, index) => {
@@ -108,7 +119,9 @@ function renderServices(services, yOffset) {
         const phase = service.status.phase ? service.status.phase.toLowerCase() : '';
         const externalIps = service.spec.externalIPs ? `${service.spec.externalIPs[0]}:${service.spec.ports[0].port}` : undefined;
         const clusterIp = service.spec.clusterIP;
-        const loadBalancer = service.status.loadBalancer && service.status.loadBalancer.ingress ? service.status.loadBalancer.ingress[0].ip : undefined;
+        const loadBalancer = service.status.loadBalancer && service.status.loadBalancer.ingress
+            ? service.status.loadBalancer.ingress[0].ip
+            : undefined;
         const y = yOffset + index * 1.1 * ENTITY_HEIGHT;
 
         const entity =
@@ -127,6 +140,12 @@ function renderServices(services, yOffset) {
     return renderedServices;
 }
 
+/**
+ * Render deployments relative to the supplied yOffset.
+ * @param {Array} deployments The deployments to render.
+ * @param {Array} pods The pods in group to calculate x offset.
+ * @param {number} yOffset The y axis offset to render the deployments with.
+ */
 function renderDeployments(deployments, pods, yOffset) {
     let renderedDeployments = '';
     const podsCount = pods ? pods.length : 0;
@@ -156,9 +175,14 @@ function renderDeployments(deployments, pods, yOffset) {
     return renderedDeployments;
 }
 
+/**
+ * Calculate the left offset according to number of pods.
+ * @param {Object} deployment The deployment.
+ * @param {number} podsCount The number of pods in group.
+ */
 function getDeploymentLeftOffset(deployment, podsCount) {
-    const calculatedReplicaLeft = DEPL_POD_SPACE + (deployment.status.replicas * 130);
-    const calculatedPodsLeft = DEPL_POD_SPACE + (podsCount * 130);
+    const calculatedReplicaLeft = DEPL_POD_SPACE + (deployment.status.replicas * POD_SPACE_HOR);
+    const calculatedPodsLeft = DEPL_POD_SPACE + (podsCount * POD_SPACE_HOR);
 
     let left;
     if (DEPL_MIN_LEFT > calculatedReplicaLeft && DEPL_MIN_LEFT > calculatedPodsLeft) {
@@ -171,6 +195,13 @@ function getDeploymentLeftOffset(deployment, podsCount) {
     return left;
 }
 
+
+/**
+ * Connect deployments and pods with jsPlumb if image versions match.
+ * @param {Array} deployments The deployments.
+ * @param {Array} pods The pods.
+ * @param {Object} jsPlumbInstance The jsPlumb instance.
+ */
 function connectDeployments(deployments, pods, jsPlumbInstance) {
     deployments.forEach((deployment, i) => {
         pods.forEach(pod => {
@@ -181,13 +212,19 @@ function connectDeployments(deployments, pods, jsPlumbInstance) {
                 source: `deployment-${deployment.metadata.name}`,
                 target: `pod-${pod.metadata.name}`,
                 anchors: ['Left', 'Bottom'],
-                paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLORS_DPL[i & 1] },
-                endpointStyle: { fillStyle: COLORS_DPL[i & 1], radius: LINE_RADIUS },
+                paintStyle: { lineWidth: CONN_LINE_WIDTH, strokeStyle: COLORS_DPL[i & 1] },
+                endpointStyle: { fillStyle: COLORS_DPL[i & 1], radius: CONN_LINE_RADIUS },
             });
         });
     });
 }
 
+/**
+ * Connect services and pods with jsPlumb if labels and selectors match.
+ * @param {Array} services The services.
+ * @param {Array} pods The pods.
+ * @param {Object} jsPlumbInstance The jsPlumb instance.
+ */
 function connectServices(services, pods, jsPlumbInstance) {
     services.forEach((service, i) => {
         pods.forEach(pod => {
@@ -199,8 +236,8 @@ function connectServices(services, pods, jsPlumbInstance) {
                 source: `service-${service.metadata.name}`,
                 target: `pod-${pod.metadata.name}`,
                 anchors: ['Right', 'Top'],
-                paintStyle: { lineWidth: LINE_WIDTH, strokeStyle: COLORS_SVC[i & 1] },
-                endpointStyle: { fillStyle: COLORS_SVC[i & 1], radius: LINE_RADIUS },
+                paintStyle: { lineWidth: CONN_LINE_WIDTH, strokeStyle: COLORS_SVC[i & 1] },
+                endpointStyle: { fillStyle: COLORS_SVC[i & 1], radius: CONN_LINE_RADIUS },
             });
         });
     });
