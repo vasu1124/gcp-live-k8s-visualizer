@@ -93,7 +93,7 @@ function renderPods(pods, yOffset) {
             `<div class="window pod ${phase}" title="${name}" id="pod-${name}"
             style="left: ${x + SRV_POD_SPACE_HOR}px; top: ${yOffset}px">
             <span>
-            v.${extractVersion(pod.spec.containers[0].image)}
+            ${extractVersion(pod.spec.containers[0].image)}
             ${version ? `<br/>${version}` : ''}<br/><br/>
             ${name ? truncate(name, 28) : 'No name'}<br/><br/>
             ${podIp ? `<em>${podIp}</em>` : `<em>${phase}</em>`}
@@ -248,20 +248,15 @@ function connectServices(services, pods, jsPlumbInstance) {
  * Default to RaspberryPi.
  *
  * @param {Object} node The node.
- * @returns Identified provider name or 'pi'.
+ * @returns Identified provider name.
  */
 function getNodeProvider(node) {
     if (!node || !node.spec || !node.spec.providerID) {
-        return 'pi';
+        return 'gce';
     }
 
     const provider = node.spec.providerID.split(':')[0];
-    switch (provider) {
-    case 'gce':
-        return 'gce';
-    default:
-        return 'pi';
-    }
+    return provider;
 }
 
 /**
