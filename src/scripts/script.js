@@ -80,7 +80,7 @@ function loadData() {
         });
     requests.push(podsReq);
 
-    const deploymentsReq = getJson('/apis/extensions/v1beta1/namespaces/default/deployments/?labelSelector=visualize%3Dtrue')
+    const deploymentsReq = getJson('/apis/apps/v1/deployments/?labelSelector=visualize%3Dtrue')
         .then((data) => {
             deployments = data.items;
             hideError(deploymentErrorElement);
